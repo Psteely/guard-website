@@ -19,7 +19,7 @@ export default {
         headers: { "Content-Type": "application/json", ...cors }
       });
 
-    // LIST PBs
+    // LIST PBs      
     if (pathname === "/api/pb/list" && request.method === "GET") {
       const list = [];
       const { keys } = await env.PB.list();
@@ -45,7 +45,11 @@ export default {
     // CREATE PB
     if (pathname === "/api/pb/create" && request.method === "POST") {
       const body = await request.json();
-      const id = crypto.randomUUID();
+
+      // FIXED: random ID generation for service-worker mode
+      const id =
+        crypto.randomUUID?.() ||
+        crypto.getRandomValues(new Uint8Array(16)).join("");
 
       const pb = {
         id,
@@ -134,7 +138,7 @@ export default {
         return json({ ok: true });
       }
 
-      // ASSIGN
+      // ASSIGN     
       if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
         const body = await request.json();
         const { password, main, screening } = body;

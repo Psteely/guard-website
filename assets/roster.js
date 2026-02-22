@@ -38,6 +38,9 @@ async function loadPBInfo() {
   currentAssignments = pb.assignments || null;
 }
 
+// Back to roster
+document.getElementById("backLink").href = `/pb/index.html`;
+
 // Load roster from backend
 async function loadRoster() {
   try {
