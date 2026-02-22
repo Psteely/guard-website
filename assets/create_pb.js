@@ -3,7 +3,9 @@
 console.log("create_pb.js loaded");
 
 
-const API_BASE = "http://127.0.0.1:8787/api";
+//const API_BASE = "http://127.0.0.1:8787/api";
+const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
+
 
 document.getElementById("createForm").addEventListener("submit", async (e) => {
   e.preventDefault();

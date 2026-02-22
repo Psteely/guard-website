@@ -1,6 +1,7 @@
 // roster.js — READ-ONLY VERSION WITH PB METADATA + BR TOTALS + ASSIGNED TICKS
 
-const API_BASE = "http://127.0.0.1:8787/api";
+//const API_BASE = "http://127.0.0.1:8787/api";
+const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
 // Read PB ID from ?id=<id>
 const url = new URL(window.location.href);

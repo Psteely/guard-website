@@ -1,7 +1,8 @@
 // index.js — list PBs, create PB, delete PB
 console.log("index.js loaded");
 
-const API_BASE = "http://127.0.0.1:8787/api";
+//const API_BASE = "http://127.0.0.1:8787/api";
+const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
 async function loadPBs() {
   const listDiv = document.getElementById("pbList");

@@ -1,6 +1,7 @@
 // pb-index.js — Port Battle List + Create/Delete PB
 
-const API_BASE = "http://127.0.0.1:8787/api";
+//const API_BASE = "http://127.0.0.1:8787/api";
+const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
 // Elements
 const pbList = document.getElementById("pbList");

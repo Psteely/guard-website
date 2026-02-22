@@ -1,6 +1,8 @@
 // assign.js — Auto-Save Version with PB Metadata + BR Totals + Roster Filtering
 
-const API_BASE = "http://127.0.0.1:8787/api";
+//const API_BASE = "http://127.0.0.1:8787/api";
+
+const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
 // Read PB ID
 const url = new URL(window.location.href);
