@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sign Up – Admiralty Board</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="admiralty-body">
+
+<div class="admiralty-shell">
+
+  <!-- Sidebar -->
+  <aside class="admiralty-sidebar">
+    <div class="admiralty-logo">
+      <div class="admiralty-crest">⚓</div>
+      <div class="admiralty-title">Admiralty Board</div>
+      <div class="admiralty-subtitle">Clan Operations</div>
+    </div>
+
+    <nav class="admiralty-nav">
+      <a href="/index.html" class="nav-link">Dashboard</a>
+      <a href="/pb/index.html" class="nav-link">Port Battles</a>
+      <a href="/charter.html" class="nav-link">Clan Charter</a>
+      <a href="/links.html" class="nav-link">Useful Links</a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="admiralty-main">
+
+    <div style="margin-bottom:20px;">
+      <a id="backLink" href="#" style="color:#8cf; font-weight:bold;">← Back to Roster</a>
+    </div>
+
+    <!-- PB Metadata -->
+    <div id="pbMeta" style="margin-bottom:20px; color:#ccc; line-height:1.4em;">
+      <div id="pbTitle" style="font-size:1.4em; font-weight:bold;"></div>
+      <div><strong>Date:</strong> <span id="pbDate"></span></div>
+      <div><strong>Time:</strong> <span id="pbTime"></span></div>
+      <div><strong>BR:</strong> <span id="pbBR"></span></div>
+      <div><strong>Water:</strong> <span id="pbWater"></span></div>
+    </div>
+
+    <!-- Side-by-side fields -->
+    <div style="display:flex; gap:20px; align-items:flex-start;">
+
+      <div>
+        <label>Your Name:</label><br>
+        <input id="nameInput" type="text" style="width:200px;">
+      </div>
+
+      <div>
+        <label>Your Ship:</label><br>
+        <select id="shipSelect" style="width:260px;"></select>
+      </div>
+
+      <div>
+        <label>BR:</label><br>
+        <input id="brInput" type="number" style="width:120px;">
+      </div>
+
+    </div>
+
+    <br><br>
+
+    <button id="signupBtn">Join Port Battle</button>
+
+  </main>
+
+</div>
+
+<script src="../assets/signup.js"></script>
+</body>
+</html>

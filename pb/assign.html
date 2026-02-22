@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Officer Assignments – Admiralty Board</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="admiralty-body">
+
+<div class="admiralty-shell">
+
+  <!-- Sidebar -->
+  <aside class="admiralty-sidebar">
+    <div class="admiralty-logo">
+      <div class="admiralty-crest">⚓</div>
+      <div class="admiralty-title">Admiralty Board</div>
+      <div class="admiralty-subtitle">Clan Operations</div>
+    </div>
+
+    <nav class="admiralty-nav">
+      <a href="/index.html" class="nav-link">Dashboard</a>
+      <a href="/pb/index.html" class="nav-link">Port Battles</a>
+      <a href="/charter.html" class="nav-link">Clan Charter</a>
+      <a href="/links.html" class="nav-link">Useful Links</a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="admiralty-main">
+
+    <div style="margin-bottom:20px;">
+      <a id="backLink" href="#" style="color:#8cf; font-weight:bold;">← Back to Roster</a>
+    </div>
+
+    <h1 class="page-title" id="pbTitle"></h1>
+
+    <!-- PB Metadata -->
+    <div id="pbMeta" style="margin-bottom:20px; color:#ccc; line-height:1.4em;">
+      <div><strong>Date:</strong> <span id="pbDate"></span></div>
+      <div><strong>Time:</strong> <span id="pbTime"></span></div>
+      <div><strong>BR:</strong> <span id="pbBR"></span></div>
+      <div><strong>Water:</strong> <span id="pbWater"></span></div>
+    </div>
+
+    <h2>Assignments</h2>
+
+    <div class="columns">
+      <div class="column">
+        <h3>Main Port Battle</h3>
+        <div><strong>Total BR:</strong> <span id="mainBR">0</span></div>
+        <div id="main" class="droppable"></div>
+      </div>
+
+      <div class="column">
+        <h3>Screening</h3>
+        <div id="screening" class="droppable"></div>
+      </div>
+    </div>
+
+    <h2>Roster</h2>
+    <div id="roster" class="droppable">Loading roster...</div>
+
+  </main>
+
+</div>
+
+<script src="../assets/assign.js"></script>
+</body>
+</html>

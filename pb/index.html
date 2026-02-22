@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Port Battles – Admiralty Board</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body class="admiralty-body">
+
+<div class="admiralty-shell">
+
+  <!-- Sidebar -->
+  <aside class="admiralty-sidebar">
+    <div class="admiralty-logo">
+      <div class="admiralty-crest">⚓</div>
+      <div class="admiralty-title">Admiralty Board</div>
+      <div class="admiralty-subtitle">Clan Operations</div>
+    </div>
+
+    <nav class="admiralty-nav">
+      <a href="/index.html" class="nav-link">Dashboard</a>
+      <a href="/pb/index.html" class="nav-link nav-link-active">Port Battles</a>
+      <a href="/charter.html" class="nav-link">Clan Charter</a>
+      <a href="/links.html" class="nav-link">Useful Links</a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="admiralty-main">
+
+    <h1 class="page-title">Port Battles</h1>
+    <p class="page-subtitle">Manage upcoming and historical port battles.</p>
+
+    <!-- Create PB Button -->
+    <div style="margin-bottom:20px;">
+      <a id="openCreatePB" class="button">+ Create New Port Battle</a>
+    </div>
+
+    <!-- PB List -->
+    <div id="pbList">
+      Loading port battles...
+    </div>
+
+    <!-- CREATE PORT BATTLE MODAL -->
+    <div id="createModal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <span id="closeModal" class="modal-close">&times;</span>
+
+        <h2>Create New Port Battle</h2>
+
+        <div class="modal-field">
+          <label>Name:</label>
+          <input id="pbName" type="text">
+        </div>
+
+        <div class="modal-field">
+          <label>Date:</label>
+          <input id="pbDateInput" type="date">
+        </div>
+
+        <div class="modal-field">
+          <label>Time:</label>
+          <input id="pbTimeInput" type="time">
+        </div>
+
+        <div class="modal-field">
+          <label>BR:</label>
+          <input id="pbBRInput" type="number">
+        </div>
+
+        <div class="modal-field">
+          <label>Water:</label>
+          <select id="pbWaterInput">
+            <option value="shallow">Shallow</option>
+            <option value="deep">Deep</option>
+          </select>
+        </div>
+
+        <button id="createPBBtn" class="button">Create Port Battle</button>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+<script src="../assets/pb-index.js"></script>
+</body>
+</html>

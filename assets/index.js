@@ -1,0 +1,112 @@
+// index.js — list PBs, create PB, delete PB
+console.log("index.js loaded");
+
+const API_BASE = "http://127.0.0.1:8787/api";
+
+async function loadPBs() {
+  const listDiv = document.getElementById("pbList");
+  listDiv.innerHTML = "Loading...";
+
+  try {
+    const res = await fetch(`${API_BASE}/pb-list`);
+    if (!res.ok) {
+      listDiv.innerHTML = "<p>Failed to load Port Battles.</p>";
+      return;
+    }
+
+    const pbs = await res.json();
+
+    if (pbs.length === 0) {
+      listDiv.innerHTML = "<p>No active Port Battles.</p>";
+      return;
+    }
+
+    let html = "";
+    pbs.forEach(pb => {
+      html += `
+        <div class="pb-card">
+          <strong>${pb.name}</strong><br>
+          Date: ${pb.date || "N/A"}<br>
+          Time: ${pb.time || "N/A"}<br>
+          BR: ${pb.br || "N/A"}<br>
+          Water: ${pb.water || "N/A"}<br>
+          <a href="/pb/roster.html?id=${pb.id}">View Roster</a><br>
+          <button class="deletePB" data-id="${pb.id}">Delete</button>
+        </div>
+      `;
+    });
+
+    listDiv.innerHTML = html;
+
+  } catch (err) {
+    console.error(err);
+    listDiv.innerHTML = "<p>Error loading Port Battles.</p>";
+  }
+}
+
+// Show modal
+document.getElementById("createPB").addEventListener("click", () => {
+  document.getElementById("createModal").style.display = "block";
+});
+
+// Cancel modal
+document.getElementById("createPBCancel").addEventListener("click", () => {
+  document.getElementById("createModal").style.display = "none";
+});
+
+// Confirm creation
+document.getElementById("createPBConfirm").addEventListener("click", async () => {
+  const name = document.getElementById("pbName").value.trim();
+  const date = document.getElementById("pbDate").value;
+  const time = document.getElementById("pbTime").value;
+  const br = parseInt(document.getElementById("pbBR").value, 10);
+  const water = document.getElementById("pbWater").value;
+
+  if (!name || !date || !time || !br) {
+    alert("Please fill in all fields.");
+    return;
+  }
+
+  const res = await fetch(`${API_BASE}/pb`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      date,
+      time,
+      br,
+      water
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.ok) {
+    window.location.href = `/pb/roster.html?id=${data.id}`;
+  } else {
+    alert("Failed to create Port Battle.");
+  }
+});
+
+// DELETE PB
+document.addEventListener("click", async (e) => {
+  if (!e.target.classList.contains("deletePB")) return;
+
+  const id = e.target.dataset.id;
+
+  if (!confirm("Delete this Port Battle? This cannot be undone.")) return;
+
+  const res = await fetch(`${API_BASE}/pb/${id}`, {
+    method: "DELETE"
+  });
+
+  const data = await res.json();
+
+  if (data.ok) {
+    loadPBs();
+  } else {
+    alert("Failed to delete Port Battle.");
+  }
+});
+
+loadPBs();
