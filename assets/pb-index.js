@@ -1,12 +1,40 @@
-// pb-index.js — Port Battle List + Create/Delete PB
+// pb-index.js — Port Battle List + Create/Delete PB + Officer Login
 
-//const API_BASE = "http://127.0.0.1:8787/api";
 const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
 // Elements
 const pbList = document.getElementById("pbList");
 
-// Load all PBs
+// ------------------------------
+// OFFICER LOGIN SYSTEM
+// ------------------------------
+
+const OFFICER_PASSWORD = "Nelson1798";
+
+function checkOfficerStatus() {
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
+
+  document.querySelectorAll(".officerOnly").forEach(el => {
+    el.style.display = isOfficer ? "inline-block" : "none";
+  });
+}
+
+document.getElementById("officerLoginBtn").addEventListener("click", () => {
+  const entered = prompt("Enter officer password:");
+
+  if (entered === OFFICER_PASSWORD) {
+    localStorage.setItem("isOfficer", "true");
+    alert("Officer access granted.");
+    checkOfficerStatus();
+  } else {
+    alert("Incorrect password.");
+  }
+});
+
+// ------------------------------
+// LOAD PB LIST
+// ------------------------------
+
 async function loadPBs() {
   pbList.innerHTML = "Loading port battles...";
 
@@ -31,20 +59,29 @@ async function loadPBs() {
 
         <div class="pb-links">
           <a href="/pb/roster.html?id=${pb.id}">Roster</a> |
-          <a href="/pb/assign.html?id=${pb.id}">Assign</a> |
-          <a href="/pb/signup.html?id=${pb.id}">Signup</a>
+          <a href="/pb/signup.html?id=${pb.id}">Signup</a> |
+
+          <!-- OFFICER-ONLY: Assign -->
+          <a href="/pb/assign.html?id=${pb.id}" class="officerOnly assignBtn">Assign</a>
         </div>
 
-        <button class="pb-delete" data-id="${pb.id}">Delete</button>
+        <!-- OFFICER-ONLY: Delete -->
+        <button class="pb-delete officerOnly deleteBtn" data-id="${pb.id}">Delete</button>
       </div>
     `;
   });
 
   html += "</div>";
   pbList.innerHTML = html;
+
+  // IMPORTANT: Re-check officer visibility AFTER cards are created
+  checkOfficerStatus();
 }
 
-// Modal handling
+// ------------------------------
+// MODAL HANDLING
+// ------------------------------
+
 function openModal() {
   document.getElementById("createModal").style.display = "block";
 }
@@ -69,13 +106,7 @@ async function createPB() {
   const res = await fetch(`${API_BASE}/pb/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      date,
-      time,
-      br,
-      water
-    })
+    body: JSON.stringify({ name, date, time, br, water })
   });
 
   const data = await res.json();
@@ -88,7 +119,10 @@ async function createPB() {
   }
 }
 
-// Delete PB
+// ------------------------------
+// DELETE PB
+// ------------------------------
+
 document.addEventListener("click", async (e) => {
   if (!e.target.classList.contains("pb-delete")) return;
 
@@ -96,10 +130,7 @@ document.addEventListener("click", async (e) => {
 
   if (!confirm("Delete this Port Battle? This cannot be undone.")) return;
 
-  const res = await fetch(`${API_BASE}/pb/${id}`, {
-    method: "DELETE"
-  });
-
+  const res = await fetch(`${API_BASE}/pb/${id}`, { method: "DELETE" });
   const data = await res.json();
 
   if (data.ok) {
@@ -109,11 +140,15 @@ document.addEventListener("click", async (e) => {
   }
 });
 
-// Attach modal events
+// ------------------------------
+// INITIALIZE PAGE
+// ------------------------------
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("openCreatePB").addEventListener("click", openModal);
   document.getElementById("closeModal").addEventListener("click", closeModal);
   document.getElementById("createPBBtn").addEventListener("click", createPB);
 
   loadPBs();
+  checkOfficerStatus();
 });

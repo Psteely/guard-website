@@ -4,6 +4,30 @@ console.log("index.js loaded");
 //const API_BASE = "http://127.0.0.1:8787/api";
 const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
+const OFFICER_PASSWORD = "Nelson1798";
+
+function checkOfficerStatus() {
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
+
+  document.querySelectorAll(".officerOnly").forEach(el => {
+    el.style.display = isOfficer ? "inline-block" : "none";
+  });
+}
+
+document.getElementById("officerLoginBtn").addEventListener("click", () => {
+  const entered = prompt("Enter officer password:");
+
+  if (entered === OFFICER_PASSWORD) {
+    localStorage.setItem("isOfficer", "true");
+    alert("Officer access granted.");
+    checkOfficerStatus();
+  } else {
+    alert("Incorrect password.");
+  }
+});
+
+checkOfficerStatus();
+
 async function loadPBs() {
   const listDiv = document.getElementById("pbList");
   listDiv.innerHTML = "Loading...";
@@ -25,15 +49,24 @@ async function loadPBs() {
     let html = "";
     pbs.forEach(pb => {
       html += `
-        <div class="pb-card">
-          <strong>${pb.name}</strong><br>
-          Date: ${pb.date || "N/A"}<br>
-          Time: ${pb.time || "N/A"}<br>
-          BR: ${pb.br || "N/A"}<br>
-          Water: ${pb.water || "N/A"}<br>
-          <a href="/pb/roster.html?id=${pb.id}">View Roster</a><br>
-          <button class="deletePB" data-id="${pb.id}">Delete</button>
-        </div>
+       <div class="pb-card">
+  <h3>${pb.name}</h3>
+  <div>Date: ${pb.date}</div>
+  <div>Time: ${pb.time}</div>
+  <div>BR: ${pb.br}</div>
+  <div>Water: ${pb.water}</div>
+
+  <div class="pb-links">
+    <a href="/pb/roster.html?id=${pb.id}">Roster</a> |
+    <a href="/pb/signup.html?id=${pb.id}">Signup</a> |
+
+    <!-- OFFICER ONLY -->
+    <a href="/pb/assign.html?id=${pb.id}" class="officerOnly assignBtn">Assign</a>
+  </div>
+
+  <!-- OFFICER ONLY -->
+  <button class="pb-delete officerOnly deleteBtn" data-id="${pb.id}">Delete</button>
+</div>
       `;
     });
 

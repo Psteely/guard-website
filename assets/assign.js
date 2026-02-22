@@ -1,6 +1,4 @@
-// assign.js — Auto-Save Version with PB Metadata + BR Totals + Roster Filtering
-
-//const API_BASE = "http://127.0.0.1:8787/api";
+// assign.js — PB Metadata + BR Totals + Screening BR + Drag/Drop + Debounced Auto-Save + Saving Indicator
 
 const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
@@ -18,27 +16,78 @@ document.getElementById("backLink").href = `/pb/roster.html?id=${pbId}`;
 
 let roster = [];
 let assignments = { main: [], screening: [] };
+let brLimit = 0;
 
-// Load PB metadata + existing assignments
+// ------------------------------
+// SAVING INDICATOR
+// ------------------------------
+
+let saveTimeout = null;
+
+function showSaving() {
+  let el = document.getElementById("savingIndicator");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "savingIndicator";
+    el.style.position = "fixed";
+    el.style.bottom = "20px";
+    el.style.right = "20px";
+    el.style.padding = "10px 16px";
+    el.style.background = "rgba(0,0,0,0.7)";
+    el.style.color = "#fff";
+    el.style.borderRadius = "6px";
+    el.style.fontSize = "14px";
+    el.style.zIndex = "9999";
+    el.style.transition = "opacity 0.4s ease";
+    document.body.appendChild(el);
+  }
+  el.textContent = "Saving…";
+  el.style.opacity = "1";
+}
+
+function showSaved() {
+  const el = document.getElementById("savingIndicator");
+  if (!el) return;
+  el.textContent = "Saved";
+  setTimeout(() => {
+    el.style.opacity = "0";
+  }, 600);
+}
+
+function scheduleSave() {
+  showSaving();
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    autoSave();
+  }, 500); // waits 0.5 seconds after last drag
+}
+
+// ------------------------------
+// LOAD PB METADATA
+// ------------------------------
+
 async function loadPBInfo() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
   if (!res.ok) return;
 
   const pb = await res.json();
 
-  // Title
   document.getElementById("pbTitle").textContent = pb.name;
-
-  // Metadata
   document.getElementById("pbDate").textContent = pb.date || "N/A";
   document.getElementById("pbTime").textContent = pb.time || "N/A";
   document.getElementById("pbBR").textContent = pb.br || "N/A";
   document.getElementById("pbWater").textContent = pb.water || "N/A";
 
+  brLimit = Number(pb.br) || 0;
+  document.getElementById("mainBRLimit").textContent = brLimit;
+
   assignments = pb.assignments || { main: [], screening: [] };
 }
 
-// Load roster
+// ------------------------------
+// LOAD ROSTER
+// ------------------------------
+
 async function loadRoster() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
   roster = await res.json();
@@ -48,7 +97,10 @@ async function loadRoster() {
   enableDragDrop();
 }
 
-// Render roster (only unassigned captains)
+// ------------------------------
+// RENDER ROSTER
+// ------------------------------
+
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
   rosterDiv.innerHTML = "";
@@ -62,7 +114,10 @@ function renderRoster() {
     });
 }
 
-// Render assignments into columns
+// ------------------------------
+// RENDER ASSIGNMENTS
+// ------------------------------
+
 function renderAssignments() {
   const mainDiv = document.getElementById("main");
   const screeningDiv = document.getElementById("screening");
@@ -71,6 +126,7 @@ function renderAssignments() {
   screeningDiv.innerHTML = "";
 
   let mainBR = 0;
+  let screeningBR = 0;
 
   // MAIN
   assignments.main.forEach(name => {
@@ -84,14 +140,47 @@ function renderAssignments() {
   // SCREENING
   assignments.screening.forEach(name => {
     const p = roster.find(x => x.name === name);
-    if (p) screeningDiv.appendChild(makeCard(p));
+    if (p) {
+      screeningBR += Number(p.br) || 0;
+      screeningDiv.appendChild(makeCard(p));
+    }
   });
 
-  // Update BR total
+  // Update BR totals
   document.getElementById("mainBR").textContent = mainBR;
+  document.getElementById("screeningBR").textContent = screeningBR;
+
+  updateBRStatus(mainBR);
 }
 
-// Create draggable card
+// ------------------------------
+// BR STATUS
+// ------------------------------
+
+function updateBRStatus(mainBR) {
+  const statusDiv = document.getElementById("brStatus");
+  const warningSpan = document.getElementById("brWarning");
+
+  const ratio = mainBR / brLimit;
+
+  statusDiv.classList.remove("br-ok", "br-warn", "br-over");
+
+  if (ratio >= 1) {
+    statusDiv.classList.add("br-over");
+    warningSpan.textContent = ` — OVER LIMIT by ${mainBR - brLimit} BR`;
+  } else if (ratio >= 0.8) {
+    statusDiv.classList.add("br-warn");
+    warningSpan.textContent = ` — Approaching limit`;
+  } else {
+    statusDiv.classList.add("br-ok");
+    warningSpan.textContent = "";
+  }
+}
+
+// ------------------------------
+// CARD CREATION
+// ------------------------------
+
 function makeCard(p) {
   const div = document.createElement("div");
   div.className = "card draggable";
@@ -102,20 +191,32 @@ function makeCard(p) {
   return div;
 }
 
-// Auto-save assignments to backend
+// ------------------------------
+// AUTO-SAVE (DEBOUNCED)
+// ------------------------------
+
 async function autoSave() {
-  await fetch(`${API_BASE}/pb/${pbId}/assign`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      password: "Nelson1798",
-      main: assignments.main,
-      screening: assignments.screening
-    })
-  });
+  try {
+    await fetch(`${API_BASE}/pb/${pbId}/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        password: "Nelson1798",
+        main: assignments.main,
+        screening: assignments.screening
+      })
+    });
+
+    showSaved();
+  } catch (err) {
+    console.error("Auto-save failed:", err);
+  }
 }
 
-// Drag & Drop logic
+// ------------------------------
+// DRAG & DROP
+// ------------------------------
+
 function enableDragDrop() {
   document.querySelectorAll(".draggable").forEach(el => {
     el.addEventListener("dragstart", e => {
@@ -123,34 +224,32 @@ function enableDragDrop() {
     });
   });
 
-  // All drop zones: main, screening, roster
   document.querySelectorAll(".droppable, #roster").forEach(area => {
     area.addEventListener("dragover", e => e.preventDefault());
 
-    area.addEventListener("drop", async e => {
+    area.addEventListener("drop", e => {
       e.preventDefault();
       const name = e.dataTransfer.getData("text/plain");
 
-      // Remove from both groups
       assignments.main = assignments.main.filter(n => n !== name);
       assignments.screening = assignments.screening.filter(n => n !== name);
 
-      // Add to the correct group
       if (area.id === "main") assignments.main.push(name);
       if (area.id === "screening") assignments.screening.push(name);
-      // If dropped on roster, do nothing (captain becomes unassigned)
 
       renderRoster();
       renderAssignments();
       enableDragDrop();
 
-      // Auto-save immediately
-      await autoSave();
+      scheduleSave();
     });
   });
 }
 
-// Initial load
+// ------------------------------
+// INITIAL LOAD
+// ------------------------------
+
 (async () => {
   await loadPBInfo();
   await loadRoster();

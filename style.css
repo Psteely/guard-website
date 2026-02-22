@@ -459,4 +459,25 @@ body {
     border-radius: 6px; /* optional */
 }
 
+.br-status {
+  margin: 8px 0 12px 0;
+  font-weight: bold;
+}
+
+.br-ok {
+  color: #2ecc71;
+}
+
+.br-warn {
+  color: #f1c40f;
+}
+
+.br-over {
+  color: #e74c3c;
+}
+
+.br-warning {
+  margin-left: 6px;
+}
+
 /* Reuse your existing .card, .columns, etc. */

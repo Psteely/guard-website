@@ -1,9 +1,37 @@
-// roster.js — READ-ONLY VERSION WITH PB METADATA + BR TOTALS + ASSIGNED TICKS
+// roster.js — READ-ONLY VERSION WITH PB METADATA + BR TOTALS + BR WARNINGS + OFFICER LOGIN
 
-//const API_BASE = "http://127.0.0.1:8787/api";
 const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
-// Read PB ID from ?id=<id>
+// ------------------------------
+// OFFICER LOGIN SYSTEM
+// ------------------------------
+
+const OFFICER_PASSWORD = "Nelson1798";
+
+function checkOfficerStatus() {
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
+
+  document.querySelectorAll(".officerOnly").forEach(el => {
+    el.style.display = isOfficer ? "inline-block" : "none";
+  });
+}
+
+document.getElementById("officerLoginBtn")?.addEventListener("click", () => {
+  const entered = prompt("Enter officer password:");
+
+  if (entered === OFFICER_PASSWORD) {
+    localStorage.setItem("isOfficer", "true");
+    alert("Officer access granted.");
+    checkOfficerStatus();
+  } else {
+    alert("Incorrect password.");
+  }
+});
+
+// ------------------------------
+// PB ID
+// ------------------------------
+
 const url = new URL(window.location.href);
 const pbId = url.searchParams.get("id");
 
@@ -18,6 +46,7 @@ document.getElementById("officerLink").href = `/pb/assign.html?id=${pbId}`;
 
 let currentAssignments = null;
 let currentRoster = [];
+let brLimit = 0;
 
 // Load PB info (name + date + time + BR + water + assignments)
 async function loadPBInfo() {
@@ -34,6 +63,9 @@ async function loadPBInfo() {
   document.getElementById("pbTime").textContent = pb.time || "N/A";
   document.getElementById("pbBR").textContent = pb.br || "N/A";
   document.getElementById("pbWater").textContent = pb.water || "N/A";
+
+  brLimit = Number(pb.br) || 0;
+  document.getElementById("mainBRLimit").textContent = brLimit;
 
   currentAssignments = pb.assignments || null;
 }
@@ -141,6 +173,29 @@ function renderAssignments() {
   // Update BR totals
   document.getElementById("mainBR").textContent = mainBR;
   document.getElementById("screeningBR").textContent = screeningBR;
+
+  updateBRStatus(mainBR);
+}
+
+// Update BR status block
+function updateBRStatus(mainBR) {
+  const statusDiv = document.getElementById("mainBRStatus");
+  const warningSpan = document.getElementById("mainBRWarning");
+
+  const ratio = mainBR / brLimit;
+
+  statusDiv.classList.remove("br-ok", "br-warn", "br-over");
+
+  if (ratio >= 1) {
+    statusDiv.classList.add("br-over");
+    warningSpan.textContent = ` — OVER LIMIT by ${mainBR - brLimit} BR`;
+  } else if (ratio >= 0.8) {
+    statusDiv.classList.add("br-warn");
+    warningSpan.textContent = ` — Approaching limit`;
+  } else {
+    statusDiv.classList.add("br-ok");
+    warningSpan.textContent = "";
+  }
 }
 
 // Handle withdraw button clicks
@@ -174,4 +229,5 @@ document.addEventListener("click", async (e) => {
 (async () => {
   await loadPBInfo();
   await loadRoster();
+  checkOfficerStatus();   // <-- IMPORTANT
 })();

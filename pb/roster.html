@@ -40,14 +40,14 @@
     <div id="pbMeta" style="margin-bottom:20px; color:#ccc; line-height:1.4em;">
       <div><strong>Date:</strong> <span id="pbDate"></span></div>
       <div><strong>Time:</strong> <span id="pbTime"></span></div>
-      <div><strong>BR:</strong> <span id="pbBR"></span></div>
+      <div><strong>BR Limit:</strong> <span id="pbBR"></span></div>
       <div><strong>Water:</strong> <span id="pbWater"></span></div>
     </div>
 
-    <div style="margin-bottom:20px;">
-      <a id="signupLink" href="#">Sign Up</a> |
-      <a id="officerLink" href="#">Officer Assignments</a>
-    </div>
+<div style="margin-bottom:20px;">
+  <a id="signupLink" href="#">Sign Up</a> |
+  <a id="officerLink" href="#" class="officerOnly">Officer Assignments</a>
+</div>
 
     <h2>Roster</h2>
     <div id="roster">Loading roster...</div>
@@ -57,13 +57,26 @@
     <div class="columns">
       <div class="column">
         <h3>Main Port Battle</h3>
-        <div><strong>Total BR:</strong> <span id="mainBR">0</span></div>
+
+        <!-- NEW BR STATUS BLOCK -->
+        <div id="mainBRStatus" class="br-status br-ok">
+          <strong>Total BR:</strong> <span id="mainBR">0</span>
+          <strong> / </strong>
+          <span id="mainBRLimit">0</span>
+          <span id="mainBRWarning" class="br-warning"></span>
+        </div>
+
         <div id="mainView" class="droppable readonly"></div>
       </div>
 
       <div class="column">
         <h3>Screening</h3>
-        <div><strong>Total BR:</strong> <span id="screeningBR">0</span></div>
+
+        <!-- NEW SCREENING BR BLOCK -->
+        <div id="screeningBRStatus" class="br-status br-ok">
+          <strong>Total BR:</strong> <span id="screeningBR">0</span>
+        </div>
+
         <div id="screeningView" class="droppable readonly"></div>
       </div>
     </div>
