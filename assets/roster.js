@@ -13,6 +13,7 @@ if (!pbId) {
 let roster = [];
 let assignments = { main: [], screening: [] };
 let assignVersion = 0;
+let brLimit = 0;
 
 // ------------------------------
 // SAFE UI UPDATE HELPER
@@ -67,6 +68,9 @@ async function loadPBConfig() {
   safeSet("pbBRText", pb.br);
   safeSet("pbWaterText", pb.water);
 
+  brLimit = Number(pb.br) || 0;
+  safeSet("mainBRLimit", brLimit);
+
   assignments = pb.assignments || { main: [], screening: [] };
   assignVersion = pb.assignVersion || 0;
 
@@ -113,7 +117,7 @@ function renderRoster() {
 }
 
 // ------------------------------
-// RENDER ASSIGNMENTS
+// RENDER ASSIGNMENTS + BR TOTALS
 // ------------------------------
 function renderAssignments() {
   const mainDiv = document.getElementById("mainAssignments");
@@ -124,9 +128,13 @@ function renderAssignments() {
   mainDiv.innerHTML = "";
   screeningDiv.innerHTML = "";
 
+  let mainBR = 0;
+  let screeningBR = 0;
+
   assignments.main.forEach(name => {
     const p = roster.find(x => x.name === name);
     if (p) {
+      mainBR += Number(p.br) || 0;
       const div = document.createElement("div");
       div.className = "card";
       div.textContent = `${p.name} — ${p.ship} (${p.br} BR)`;
@@ -137,12 +145,43 @@ function renderAssignments() {
   assignments.screening.forEach(name => {
     const p = roster.find(x => x.name === name);
     if (p) {
+      screeningBR += Number(p.br) || 0;
       const div = document.createElement("div");
       div.className = "card";
       div.textContent = `${p.name} — ${p.ship} (${p.br} BR)`;
       screeningDiv.appendChild(div);
     }
   });
+
+  safeSet("mainBR", mainBR);
+  safeSet("screeningBR", screeningBR);
+
+  updateBRStatus(mainBR);
+}
+
+// ------------------------------
+// BR COLOUR CODING
+// ------------------------------
+function updateBRStatus(mainBR) {
+  const statusDiv = document.getElementById("mainBRStatus");
+  const warningSpan = document.getElementById("mainBRWarning");
+
+  if (!statusDiv || !warningSpan) return;
+
+  const ratio = brLimit ? mainBR / brLimit : 0;
+
+  statusDiv.classList.remove("br-ok", "br-warn", "br-over");
+
+  if (ratio >= 1) {
+    statusDiv.classList.add("br-over");
+    warningSpan.textContent = ` — OVER LIMIT by ${mainBR - brLimit} BR`;
+  } else if (ratio >= 0.8) {
+    statusDiv.classList.add("br-warn");
+    warningSpan.textContent = ` — Approaching limit`;
+  } else {
+    statusDiv.classList.add("br-ok");
+    warningSpan.textContent = "";
+  }
 }
 
 // ------------------------------

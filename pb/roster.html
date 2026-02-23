@@ -73,18 +73,32 @@
     <div class="columns">
       <div class="column">
         <h3>Main Port Battle</h3>
+
+        <!-- BR STATUS (same as assign page) -->
+        <div id="mainBRStatus" class="br-status br-ok">
+          <strong>Total BR:</strong> <span id="mainBR">0</span>
+          <strong> / </strong>
+          <span id="mainBRLimit">0</span>
+          <span id="mainBRWarning" class="br-warning"></span>
+        </div>
+
         <div id="mainAssignments" class="assignment-column"></div>
       </div>
 
       <div class="column">
         <h3>Screening</h3>
+
+        <!-- BR STATUS -->
+        <div id="screeningBRStatus" class="br-status br-ok">
+          <strong>Total BR:</strong> <span id="screeningBR">0</span>
+        </div>
+
         <div id="screeningAssignments" class="assignment-column"></div>
       </div>
     </div>
 
     <h2>Roster</h2>
 
-    <!-- MATCHING FORMAT TO MAIN/SCREENING -->
     <div class="columns">
       <div class="column">
         <h3>Available Captains</h3>
