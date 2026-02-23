@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/bundle-RcLORz/checked-fetch.js
+// .wrangler/tmp/bundle-eNEV6a/checked-fetch.js
 var urls = /* @__PURE__ */ new Set();
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
@@ -59,12 +59,40 @@ var worker_default = {
       await env.PB.put(kvKey, JSON.stringify(pb));
     }
     __name(savePB, "savePB");
+    if (pathname === "/api/officer/version" && request.method === "GET") {
+      const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
+      if (!data) return json({ version: 0 });
+      return json({ version: data.version });
+    }
+    if (pathname === "/api/officer/check" && request.method === "POST") {
+      const body = await request.json();
+      const { password } = body;
+      const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
+      if (!data || data.password !== password) {
+        return json({ ok: false });
+      }
+      return json({ ok: true, version: data.version });
+    }
+    if (pathname === "/api/officer/password" && request.method === "POST") {
+      const body = await request.json();
+      const { oldPassword, newPassword } = body;
+      const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
+      if (!data || data.password !== oldPassword) {
+        return json({ ok: false, error: "Forbidden" }, 403);
+      }
+      const updated = {
+        password: newPassword,
+        version: (data.version || 1) + 1
+      };
+      await env.PB.put("OFFICER_PASSWORD", JSON.stringify(updated));
+      return json({ ok: true });
+    }
     if (pathname === "/api/pb/list" && request.method === "GET") {
       const list = [];
       const { keys } = await env.PB.list();
       for (const k of keys) {
         const pb = await env.PB.get(k.name, { type: "json" });
-        if (pb) {
+        if (pb && pb.id) {
           list.push({
             id: pb.id,
             name: pb.name,
@@ -143,10 +171,7 @@ var worker_default = {
       }
       if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
         const body = await request.json();
-        const { password, main, screening } = body;
-        if (password !== "Nelson1798") {
-          return json({ ok: false, error: "Forbidden" }, 403);
-        }
+        const { main, screening } = body;
         const set = /* @__PURE__ */ new Set();
         for (const n of main) set.add(n);
         for (const n of screening) {
@@ -163,10 +188,7 @@ var worker_default = {
       }
       if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
         const body = await request.json();
-        const { password, name, date, time, br, water } = body;
-        if (password !== "Nelson1798") {
-          return json({ ok: false, error: "Forbidden" }, 403);
-        }
+        const { name, date, time, br, water } = body;
         pb.name = name;
         pb.date = date;
         pb.time = time;
@@ -222,7 +244,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-RcLORz/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-eNEV6a/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -254,7 +276,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-RcLORz/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-eNEV6a/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

@@ -19,7 +19,10 @@ export default {
         headers: { "Content-Type": "application/json", ...cors }
       });
 
-    // Utility: Load PB by internal pb.id, not KV key
+    // ---------------------------------------------------------
+    // UTILITIES
+    // ---------------------------------------------------------
+
     async function loadPBById(id) {
       const { keys } = await env.PB.list();
       for (const k of keys) {
@@ -31,10 +34,59 @@ export default {
       return { pb: null, kvKey: null };
     }
 
-    // Utility: Save PB using correct KV key
     async function savePB(kvKey, pb) {
       await env.PB.put(kvKey, JSON.stringify(pb));
     }
+
+    // ---------------------------------------------------------
+    // OFFICER PASSWORD SYSTEM (LOGIN + VERSIONING ONLY)
+    // ---------------------------------------------------------
+
+    // Get current password version
+    if (pathname === "/api/officer/version" && request.method === "GET") {
+      const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
+      if (!data) return json({ version: 0 });
+      return json({ version: data.version });
+    }
+
+    // Check password (login)
+    if (pathname === "/api/officer/check" && request.method === "POST") {
+      const body = await request.json();
+      const { password } = body;
+
+      const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
+
+      if (!data || data.password !== password) {
+        return json({ ok: false });
+      }
+
+      return json({ ok: true, version: data.version });
+    }
+
+    // Change password
+    if (pathname === "/api/officer/password" && request.method === "POST") {
+      const body = await request.json();
+      const { oldPassword, newPassword } = body;
+
+      const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
+
+      if (!data || data.password !== oldPassword) {
+        return json({ ok: false, error: "Forbidden" }, 403);
+      }
+
+      const updated = {
+        password: newPassword,
+        version: (data.version || 1) + 1
+      };
+
+      await env.PB.put("OFFICER_PASSWORD", JSON.stringify(updated));
+
+      return json({ ok: true });
+    }
+
+    // ---------------------------------------------------------
+    // PB ROUTES
+    // ---------------------------------------------------------
 
     // LIST PBs
     if (pathname === "/api/pb/list" && request.method === "GET") {
@@ -43,7 +95,7 @@ export default {
 
       for (const k of keys) {
         const pb = await env.PB.get(k.name, { type: "json" });
-        if (pb) {
+        if (pb && pb.id) {
           list.push({
             id: pb.id,
             name: pb.name,
@@ -83,7 +135,7 @@ export default {
       return json({ ok: true, id });
     }
 
-    // PB ROUTES
+    // PB SUBROUTES
     if (pathname.startsWith("/api/pb/")) {
       const parts = pathname.split("/").filter(Boolean);
       const id = parts[2];
@@ -148,15 +200,12 @@ export default {
         return json({ ok: true });
       }
 
-      // ASSIGN
+      // ASSIGN (NO PASSWORD REQUIRED)
       if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
         const body = await request.json();
-        const { password, main, screening } = body;
+        const { main, screening } = body;
 
-        if (password !== "Nelson1798") {
-          return json({ ok: false, error: "Forbidden" }, 403);
-        }
-
+        // Validate duplicates
         const set = new Set();
         for (const n of main) set.add(n);
         for (const n of screening) {
@@ -174,14 +223,10 @@ export default {
         return json({ ok: true });
       }
 
-      // UPDATE PB METADATA
+      // UPDATE PB METADATA (NO PASSWORD REQUIRED)
       if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
         const body = await request.json();
-        const { password, name, date, time, br, water } = body;
-
-        if (password !== "Nelson1798") {
-          return json({ ok: false, error: "Forbidden" }, 403);
-        }
+        const { name, date, time, br, water } = body;
 
         pb.name = name;
         pb.date = date;

@@ -1,8 +1,15 @@
-// assign.js — PB Metadata Editing + Countdown + BR Totals + Screening BR + Drag/Drop + Debounced Auto-Save + Saving Indicator
+// assets/assign.js — PB editing, assignments, drag/drop, autosave
 
-const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
+import {
+  verifyOfficerStatus,
+  requireOfficer
+} from "./auth.js";
 
-// Read PB ID
+const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+
+// ------------------------------
+// PB ID
+// ------------------------------
 const url = new URL(window.location.href);
 const pbId = url.searchParams.get("id");
 
@@ -11,7 +18,6 @@ if (!pbId) {
   throw new Error("Missing PB ID");
 }
 
-// Back to roster
 document.getElementById("backLink").href = `/pb/roster.html?id=${pbId}`;
 
 let roster = [];
@@ -21,7 +27,6 @@ let brLimit = 0;
 // ------------------------------
 // COUNTDOWN TIMER
 // ------------------------------
-
 let countdownInterval = null;
 
 function startCountdown(pbDate, pbTime) {
@@ -39,9 +44,9 @@ function startCountdown(pbDate, pbTime) {
       return;
     }
 
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-    const mins = Math.floor((diff / (1000 * 60)) % 60);
+    const days = Math.floor(diff / 86400000);
+    const hours = Math.floor((diff / 3600000) % 24);
+    const mins = Math.floor((diff / 60000) % 60);
     const secs = Math.floor((diff / 1000) % 60);
 
     document.getElementById("countdownTimer").textContent =
@@ -53,7 +58,6 @@ function startCountdown(pbDate, pbTime) {
 // ------------------------------
 // SAVING INDICATOR
 // ------------------------------
-
 let saveTimeout = null;
 
 function showSaving() {
@@ -97,14 +101,12 @@ function scheduleSave() {
 // ------------------------------
 // LOAD PB METADATA
 // ------------------------------
-
 async function loadPBInfo() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
   if (!res.ok) return;
 
   const pb = await res.json();
 
-  // Display text
   document.getElementById("pbTitle").textContent = pb.name;
   document.getElementById("pbNameText").textContent = pb.name;
   document.getElementById("pbDateText").textContent = pb.date;
@@ -112,25 +114,21 @@ async function loadPBInfo() {
   document.getElementById("pbBRText").textContent = pb.br;
   document.getElementById("pbWaterText").textContent = pb.water;
 
-  // BR limit
   brLimit = Number(pb.br) || 0;
   document.getElementById("mainBRLimit").textContent = brLimit;
 
   assignments = pb.assignments || { main: [], screening: [] };
 
-  // Start countdown
   startCountdown(pb.date, pb.time);
 
-  // Enable editing if officer
   enablePBMetaEditing(pb);
 }
 
 // ------------------------------
 // ENABLE EDIT MODE FOR OFFICERS
 // ------------------------------
-
-function enablePBMetaEditing(pb) {
-  const isOfficer = localStorage.getItem("isOfficer") === "true";
+async function enablePBMetaEditing(pb) {
+  const isOfficer = await verifyOfficerStatus();
   if (!isOfficer) return;
 
   document.querySelectorAll(".officerOnly").forEach(el => {
@@ -153,8 +151,10 @@ function enablePBMetaEditing(pb) {
 // ------------------------------
 // SAVE UPDATED PB METADATA
 // ------------------------------
-
 document.getElementById("savePBMeta")?.addEventListener("click", async () => {
+  const isOfficer = await verifyOfficerStatus();
+  if (!isOfficer) return alert("Officer access required.");
+
   const name = document.getElementById("pbNameInput").value.trim();
   const date = document.getElementById("pbDateInput").value;
   const time = document.getElementById("pbTimeInput").value;
@@ -172,7 +172,7 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      password: "Nelson1798",
+      password: "SESSION",
       name,
       date,
       time,
@@ -196,7 +196,6 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
 // ------------------------------
 // LOAD ROSTER
 // ------------------------------
-
 async function loadRoster() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
   roster = await res.json();
@@ -209,7 +208,6 @@ async function loadRoster() {
 // ------------------------------
 // RENDER ROSTER
 // ------------------------------
-
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
   rosterDiv.innerHTML = "";
@@ -226,7 +224,6 @@ function renderRoster() {
 // ------------------------------
 // RENDER ASSIGNMENTS
 // ------------------------------
-
 function renderAssignments() {
   const mainDiv = document.getElementById("main");
   const screeningDiv = document.getElementById("screening");
@@ -262,7 +259,6 @@ function renderAssignments() {
 // ------------------------------
 // BR STATUS
 // ------------------------------
-
 function updateBRStatus(mainBR) {
   const statusDiv = document.getElementById("brStatus");
   const warningSpan = document.getElementById("brWarning");
@@ -286,7 +282,6 @@ function updateBRStatus(mainBR) {
 // ------------------------------
 // CARD CREATION
 // ------------------------------
-
 function makeCard(p) {
   const div = document.createElement("div");
   div.className = "card draggable";
@@ -298,16 +293,18 @@ function makeCard(p) {
 }
 
 // ------------------------------
-// AUTO-SAVE
+// AUTO-SAVE (NO PASSWORD PROMPT)
 // ------------------------------
-
 async function autoSave() {
+  const isOfficer = await verifyOfficerStatus();
+  if (!isOfficer) return;
+
   try {
     await fetch(`${API_BASE}/pb/${pbId}/assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        password: "Nelson1798",
+        password: "SESSION",
         main: assignments.main,
         screening: assignments.screening
       })
@@ -322,7 +319,6 @@ async function autoSave() {
 // ------------------------------
 // DRAG & DROP
 // ------------------------------
-
 function enableDragDrop() {
   document.querySelectorAll(".draggable").forEach(el => {
     el.addEventListener("dragstart", e => {
@@ -355,8 +351,8 @@ function enableDragDrop() {
 // ------------------------------
 // INITIAL LOAD
 // ------------------------------
-
 (async () => {
+  await requireOfficer();
   await loadPBInfo();
   await loadRoster();
 })();

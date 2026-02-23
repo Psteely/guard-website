@@ -2,6 +2,4 @@ name = "pb-planner"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
-kv_namespaces = [
-  { binding = "PB", id = "c613f6a7ba434bd0aec6251afc11aabb" }
-]
+kv_namespaces = [  { binding = "PB", id = "bb2c2532f87c4afa93f072aa6d59d6fe" }]
