@@ -1,14 +1,7 @@
-// assets/roster.js — PB metadata + roster + BR totals + countdown + officer UI
-
-import {
-  verifyOfficerStatus
-} from "./auth.js";
+import { verifyOfficerStatus } from "./auth.js";
 
 const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
-// ------------------------------
-// PB ID & LINKS
-// ------------------------------
 const url = new URL(window.location.href);
 const pbId = url.searchParams.get("id");
 
@@ -17,22 +10,16 @@ if (!pbId) {
   throw new Error("Missing PB ID");
 }
 
-document.getElementById("signupLink").href = `/pb/signup.html?id=${pbId}`;
-document.getElementById("officerLink").href = `/pb/assign.html?id=${pbId}`;
-document.getElementById("backLink").href = `/pb/index.html`;
-
-let currentAssignments = null;
-let currentRoster = [];
-let brLimit = 0;
+let roster = [];
+let assignments = { main: [], screening: [] };
+let assignVersion = 0;
 
 // ------------------------------
-// OFFICER UI
+// SAFE UI UPDATE HELPER
 // ------------------------------
-async function updateOfficerUI() {
-  const isOfficer = await verifyOfficerStatus();
-  document.querySelectorAll(".officerOnly").forEach(el => {
-    el.style.display = isOfficer ? "inline-block" : "none";
-  });
+function safeSet(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
 }
 
 // ------------------------------
@@ -49,8 +36,11 @@ function startCountdown(pbDate, pbTime) {
     const now = Date.now();
     const diff = target - now;
 
+    const el = document.getElementById("countdownTimer");
+    if (!el) return;
+
     if (diff <= 0) {
-      document.getElementById("countdownTimer").textContent = "Battle is starting!";
+      el.textContent = "Battle is starting!";
       clearInterval(countdownInterval);
       return;
     }
@@ -60,31 +50,25 @@ function startCountdown(pbDate, pbTime) {
     const mins = Math.floor((diff / 60000) % 60);
     const secs = Math.floor((diff / 1000) % 60);
 
-    document.getElementById("countdownTimer").textContent =
-      `${days}d ${hours}h ${mins}m ${secs}s`;
-
+    el.textContent = `${days}d ${hours}h ${mins}m ${secs}s`;
   }, 1000);
 }
 
 // ------------------------------
-// LOAD PB INFO
+// LOAD PB CONFIG
 // ------------------------------
-async function loadPBInfo() {
+async function loadPBConfig() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
-  if (!res.ok) return;
-
   const pb = await res.json();
 
-  document.getElementById("pbTitle").textContent = pb.name;
-  document.getElementById("pbDate").textContent = pb.date || "N/A";
-  document.getElementById("pbTime").textContent = pb.time || "N/A";
-  document.getElementById("pbBR").textContent = pb.br || "N/A";
-  document.getElementById("pbWater").textContent = pb.water || "N/A";
+  safeSet("pbTitle", pb.name);
+  safeSet("pbDateText", pb.date);
+  safeSet("pbTimeText", pb.time);
+  safeSet("pbBRText", pb.br);
+  safeSet("pbWaterText", pb.water);
 
-  brLimit = Number(pb.br) || 0;
-  document.getElementById("mainBRLimit").textContent = brLimit;
-
-  currentAssignments = pb.assignments || null;
+  assignments = pb.assignments || { main: [], screening: [] };
+  assignVersion = pb.assignVersion || 0;
 
   startCountdown(pb.date, pb.time);
 }
@@ -93,26 +77,18 @@ async function loadPBInfo() {
 // LOAD ROSTER
 // ------------------------------
 async function loadRoster() {
-  try {
-    const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
-    if (!res.ok) {
-      document.getElementById("roster").innerHTML = "<p>Failed to load roster.</p>";
-      return;
-    }
+  const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
+  roster = await res.json();
 
-    currentRoster = await res.json();
+  renderRoster();
+  renderAssignments();
+}
 
-    if (currentRoster.length === 0) {
-      document.getElementById("roster").innerHTML = "<p>No players have signed up yet.</p>";
-    } else {
-      renderRoster();
-    }
-
-    renderAssignments();
-  } catch (err) {
-    console.error(err);
-    document.getElementById("roster").innerHTML = "<p>Error loading roster.</p>";
-  }
+// ------------------------------
+// ASSIGNMENT CHECK
+// ------------------------------
+function isAssigned(name) {
+  return assignments.main.includes(name) || assignments.screening.includes(name);
 }
 
 // ------------------------------
@@ -120,147 +96,89 @@ async function loadRoster() {
 // ------------------------------
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
+  if (!rosterDiv) return;
+
   rosterDiv.innerHTML = "";
 
-  const assigned = new Set([
-    ...(currentAssignments?.main || []),
-    ...(currentAssignments?.screening || [])
-  ]);
+  roster.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "card";
 
-  let html = "<ul>";
+    const tick = isAssigned(p.name) ? " ✔️" : "";
 
-  for (const p of currentRoster) {
-    const isAssigned = assigned.has(p.name);
-    const tick = isAssigned ? "✔️" : "";
+    div.textContent = `${p.name} — ${p.ship} (${p.br} BR)${tick}`;
 
-    html += `
-      <li>
-        ${tick} ${p.name} — ${p.ship} (${p.br} BR)
-        <button class="withdraw" data-name="${p.name}">Withdraw</button>
-      </li>
-    `;
-  }
-
-  html += "</ul>";
-  rosterDiv.innerHTML = html;
+    rosterDiv.appendChild(div);
+  });
 }
 
 // ------------------------------
 // RENDER ASSIGNMENTS
 // ------------------------------
 function renderAssignments() {
-  const mainView = document.getElementById("mainView");
-  const screeningView = document.getElementById("screeningView");
+  const mainDiv = document.getElementById("mainAssignments");
+  const screeningDiv = document.getElementById("screeningAssignments");
 
-  mainView.innerHTML = "";
-  screeningView.innerHTML = "";
+  if (!mainDiv || !screeningDiv) return;
 
-  if (!currentAssignments) {
-    mainView.innerHTML = "<p>No assignments yet.</p>";
-    screeningView.innerHTML = "<p>No assignments yet.</p>";
-    document.getElementById("mainBR").textContent = 0;
-    document.getElementById("screeningBR").textContent = 0;
-    updateBRStatus(0);
-    return;
-  }
+  mainDiv.innerHTML = "";
+  screeningDiv.innerHTML = "";
 
-  const makeCard = (p) => {
-    const div = document.createElement("div");
-    div.className = "card";
-    div.textContent = `${p.name} — ${p.ship} (${p.br} BR)`;
-    return div;
-  };
+  assignments.main.forEach(name => {
+    const p = roster.find(x => x.name === name);
+    if (p) {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.textContent = `${p.name} — ${p.ship} (${p.br} BR)`;
+      mainDiv.appendChild(div);
+    }
+  });
 
-  let mainBR = 0;
-  let screeningBR = 0;
-
-  if (currentAssignments.main?.length) {
-    currentAssignments.main.forEach(name => {
-      const p = currentRoster.find(x => x.name === name);
-      if (p) {
-        mainBR += Number(p.br) || 0;
-        mainView.appendChild(makeCard(p));
-      }
-    });
-  }
-
-  if (currentAssignments.screening?.length) {
-    currentAssignments.screening.forEach(name => {
-      const p = currentRoster.find(x => x.name === name);
-      if (p) {
-        screeningBR += Number(p.br) || 0;
-        screeningView.appendChild(makeCard(p));
-      }
-    });
-  }
-
-  document.getElementById("mainBR").textContent = mainBR;
-  document.getElementById("screeningBR").textContent = screeningBR;
-
-  updateBRStatus(mainBR);
+  assignments.screening.forEach(name => {
+    const p = roster.find(x => x.name === name);
+    if (p) {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.textContent = `${p.name} — ${p.ship} (${p.br} BR)`;
+      screeningDiv.appendChild(div);
+    }
+  });
 }
 
 // ------------------------------
-// BR STATUS
+// REAL‑TIME POLLING
 // ------------------------------
-function updateBRStatus(mainBR) {
-  const statusDiv = document.getElementById("mainBRStatus");
-  const warningSpan = document.getElementById("mainBRWarning");
-
-  const ratio = brLimit ? mainBR / brLimit : 0;
-
-  statusDiv.classList.remove("br-ok", "br-warn", "br-over");
-
-  if (!brLimit) {
-    warningSpan.textContent = "";
-    return;
-  }
-
-  if (ratio >= 1) {
-    statusDiv.classList.add("br-over");
-    warningSpan.textContent = ` — OVER LIMIT by ${mainBR - brLimit} BR`;
-  } else if (ratio >= 0.8) {
-    statusDiv.classList.add("br-warn");
-    warningSpan.textContent = ` — Approaching limit`;
-  } else {
-    statusDiv.classList.add("br-ok");
-    warningSpan.textContent = "";
-  }
-}
-
-// ------------------------------
-// WITHDRAW
-// ------------------------------
-document.addEventListener("click", async (e) => {
-  if (!e.target.classList.contains("withdraw")) return;
-
-  const name = e.target.dataset.name;
-  if (!confirm(`Remove ${name} from the roster?`)) return;
-
+async function pollForUpdates() {
   try {
-    const res = await fetch(
-      `${API_BASE}/pb/${pbId}/remove/${encodeURIComponent(name)}`,
-      { method: "DELETE" }
-    );
+    const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
+    if (!res.ok) return;
 
-    const data = await res.json();
+    const pb = await res.json();
+    const newVersion = pb.assignVersion || 0;
 
-    if (data.ok) {
+    if (newVersion !== assignVersion) {
+      assignVersion = newVersion;
+      assignments = pb.assignments || { main: [], screening: [] };
       await loadRoster();
-    } else {
-      alert("Failed to remove player.");
     }
   } catch (err) {
-    console.error(err);
-    alert("Error removing player.");
+    console.error("Polling failed:", err);
   }
-});
+}
+
+setInterval(pollForUpdates, 5000);
 
 // ------------------------------
 // INITIAL LOAD
 // ------------------------------
 (async () => {
-  await loadPBInfo();
+  await loadPBConfig();
   await loadRoster();
-  await updateOfficerUI();
+
+  const isOfficer = await verifyOfficerStatus();
+  if (isOfficer) {
+    const link = document.getElementById("assignLink");
+    if (link) link.style.display = "inline-block";
+    link.href = `/pb/assign.html?id=${pbId}`;
+  }
 })();

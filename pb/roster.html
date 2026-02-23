@@ -6,6 +6,7 @@
   <title>Roster – Admiralty Board</title>
   <link rel="stylesheet" href="../style.css">
 </head>
+
 <body class="admiralty-body">
 
 <div class="admiralty-shell">
@@ -13,9 +14,9 @@
   <!-- Sidebar -->
   <aside class="admiralty-sidebar">
     <div class="admiralty-logo">
-        <div class="admiralty-crest">
+      <div class="admiralty-crest">
         <img src="/pics/guard icon 512x512.png" alt="Admiralty Crest">
-         </div>
+      </div>
       <div class="admiralty-title">Clan GUARD</div>
       <div class="admiralty-subtitle">Clan Operations</div>
     </div>
@@ -32,20 +33,20 @@
   <main class="admiralty-main">
 
     <div style="margin-bottom:20px;">
-      <a id="backLink" href="#" style="color:#8cf; font-weight:bold;">← Back to List</a>
+      <a href="/pb/index.html" style="color:#8cf; font-weight:bold;">← Back to Port Battles</a>
     </div>
 
     <h1 class="page-title" id="pbTitle"></h1>
 
     <!-- PB Metadata -->
     <div id="pbMeta" style="margin-bottom:20px; color:#ccc; line-height:1.4em;">
-      <div><strong>Date:</strong> <span id="pbDate"></span></div>
-      <div><strong>Time (GMT):</strong> <span id="pbTime"></span></div>
-      <div><strong>BR Limit:</strong> <span id="pbBR"></span></div>
-      <div><strong>Water:</strong> <span id="pbWater"></span></div>
+      <div><strong>Date (GMT):</strong> <span id="pbDateText"></span></div>
+      <div><strong>Time (GMT):</strong> <span id="pbTimeText"></span></div>
+      <div><strong>BR Limit:</strong> <span id="pbBRText"></span></div>
+      <div><strong>Water:</strong> <span id="pbWaterText"></span></div>
     </div>
 
-    <!-- COUNTDOWN TIMER (PROMINENT) -->
+    <!-- COUNTDOWN TIMER -->
     <div id="pbCountdown" style="
       margin: 20px 0;
       padding: 15px;
@@ -60,38 +61,34 @@
       Battle starts in: <span id="countdownTimer">Loading…</span>
     </div>
 
+    <!-- Officer-only link -->
     <div style="margin-bottom:20px;">
-      <a id="signupLink" href="#">Sign Up</a> |
-      <a id="officerLink" href="#" class="officerOnly">Officer Assignments</a>
+      <a id="assignLink" href="#" style="display:none; color:#8cf; font-weight:bold;">
+        → Officer Assignment Page
+      </a>
     </div>
-
-    <h2>Roster</h2>
-    <div id="roster">Loading roster...</div>
 
     <h2>Assignments</h2>
 
     <div class="columns">
       <div class="column">
         <h3>Main Port Battle</h3>
-
-        <div id="mainBRStatus" class="br-status br-ok">
-          <strong>Total BR:</strong> <span id="mainBR">0</span>
-          <strong> / </strong>
-          <span id="mainBRLimit">0</span>
-          <span id="mainBRWarning" class="br-warning"></span>
-        </div>
-
-        <div id="mainView" class="droppable readonly"></div>
+        <div id="mainAssignments" class="assignment-column"></div>
       </div>
 
       <div class="column">
         <h3>Screening</h3>
+        <div id="screeningAssignments" class="assignment-column"></div>
+      </div>
+    </div>
 
-        <div id="screeningBRStatus" class="br-status br-ok">
-          <strong>Total BR:</strong> <span id="screeningBR">0</span>
-        </div>
+    <h2>Roster</h2>
 
-        <div id="screeningView" class="droppable readonly"></div>
+    <!-- MATCHING FORMAT TO MAIN/SCREENING -->
+    <div class="columns">
+      <div class="column">
+        <h3>Available Captains</h3>
+        <div id="roster" class="assignment-column">Loading roster...</div>
       </div>
     </div>
 
@@ -100,5 +97,6 @@
 </div>
 
 <script type="module" src="/assets/roster.js"></script>
+
 </body>
 </html>

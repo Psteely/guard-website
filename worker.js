@@ -19,10 +19,6 @@ export default {
         headers: { "Content-Type": "application/json", ...cors }
       });
 
-    // ---------------------------------------------------------
-    // UTILITIES
-    // ---------------------------------------------------------
-
     async function loadPBById(id) {
       const { keys } = await env.PB.list();
       for (const k of keys) {
@@ -38,18 +34,14 @@ export default {
       await env.PB.put(kvKey, JSON.stringify(pb));
     }
 
-    // ---------------------------------------------------------
-    // OFFICER PASSWORD SYSTEM (LOGIN + VERSIONING ONLY)
-    // ---------------------------------------------------------
+    // ---------------- OFFICER PASSWORD (LOGIN + VERSION) ----------------
 
-    // Get current password version
     if (pathname === "/api/officer/version" && request.method === "GET") {
       const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
       if (!data) return json({ version: 0 });
       return json({ version: data.version });
     }
 
-    // Check password (login)
     if (pathname === "/api/officer/check" && request.method === "POST") {
       const body = await request.json();
       const { password } = body;
@@ -63,7 +55,6 @@ export default {
       return json({ ok: true, version: data.version });
     }
 
-    // Change password
     if (pathname === "/api/officer/password" && request.method === "POST") {
       const body = await request.json();
       const { oldPassword, newPassword } = body;
@@ -84,11 +75,8 @@ export default {
       return json({ ok: true });
     }
 
-    // ---------------------------------------------------------
-    // PB ROUTES
-    // ---------------------------------------------------------
+    // ---------------- PB ROUTES ----------------
 
-    // LIST PBs
     if (pathname === "/api/pb/list" && request.method === "GET") {
       const list = [];
       const { keys } = await env.PB.list();
@@ -111,7 +99,6 @@ export default {
       return json(list);
     }
 
-    // CREATE PB
     if (pathname === "/api/pb/create" && request.method === "POST") {
       const body = await request.json();
 
@@ -128,19 +115,18 @@ export default {
         water: body.water,
         created: Date.now(),
         roster: [],
-        assignments: null
+        assignments: null,
+        assignVersion: 0
       };
 
       await env.PB.put(id, JSON.stringify(pb));
       return json({ ok: true, id });
     }
 
-    // PB SUBROUTES
     if (pathname.startsWith("/api/pb/")) {
       const parts = pathname.split("/").filter(Boolean);
       const id = parts[2];
 
-      // SAFE DELETE
       if (parts.length === 3 && request.method === "DELETE") {
         const { pb, kvKey } = await loadPBById(id);
         if (!pb) return json({ ok: false, error: "PB not found" }, 404);
@@ -149,11 +135,9 @@ export default {
         return json({ ok: true });
       }
 
-      // Load PB
       const { pb, kvKey } = await loadPBById(id);
       if (!pb) return json({ error: "Not found" }, 404);
 
-      // CONFIG
       if (parts.length === 4 && parts[3] === "config") {
         return json({
           id: pb.id,
@@ -163,16 +147,15 @@ export default {
           br: pb.br,
           water: pb.water,
           created: pb.created,
-          assignments: pb.assignments || null
+          assignments: pb.assignments || null,
+          assignVersion: pb.assignVersion || 0
         });
       }
 
-      // ROSTER
       if (parts.length === 4 && parts[3] === "roster") {
         return json(pb.roster || []);
       }
 
-      // SIGNUP
       if (parts.length === 4 && parts[3] === "signup" && request.method === "POST") {
         const body = await request.json();
         pb.roster = pb.roster || [];
@@ -191,7 +174,6 @@ export default {
         return json({ ok: true });
       }
 
-      // REMOVE FROM ROSTER
       if (parts.length === 5 && parts[3] === "remove" && request.method === "DELETE") {
         const name = decodeURIComponent(parts[4]);
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
@@ -200,12 +182,11 @@ export default {
         return json({ ok: true });
       }
 
-      // ASSIGN (NO PASSWORD REQUIRED)
+      // ASSIGN — increments assignVersion
       if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
         const body = await request.json();
         const { main, screening } = body;
 
-        // Validate duplicates
         const set = new Set();
         for (const n of main) set.add(n);
         for (const n of screening) {
@@ -219,11 +200,13 @@ export default {
           screening: screening || []
         };
 
+        pb.assignVersion = (pb.assignVersion || 0) + 1;
+
         await savePB(kvKey, pb);
-        return json({ ok: true });
+        return json({ ok: true, assignVersion: pb.assignVersion });
       }
 
-      // UPDATE PB METADATA (NO PASSWORD REQUIRED)
+      // UPDATE PB METADATA — also bumps assignVersion (so roster refreshes)
       if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
         const body = await request.json();
         const { name, date, time, br, water } = body;
@@ -234,8 +217,10 @@ export default {
         pb.br = br;
         pb.water = water;
 
+        pb.assignVersion = (pb.assignVersion || 0) + 1;
+
         await savePB(kvKey, pb);
-        return json({ ok: true });
+        return json({ ok: true, assignVersion: pb.assignVersion });
       }
 
       return json({ error: "Not found" }, 404);

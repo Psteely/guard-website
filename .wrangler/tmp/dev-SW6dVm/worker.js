@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/bundle-eNEV6a/checked-fetch.js
+// .wrangler/tmp/bundle-bx4DJo/checked-fetch.js
 var urls = /* @__PURE__ */ new Set();
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
@@ -118,7 +118,8 @@ var worker_default = {
         water: body.water,
         created: Date.now(),
         roster: [],
-        assignments: null
+        assignments: null,
+        assignVersion: 0
       };
       await env.PB.put(id, JSON.stringify(pb));
       return json({ ok: true, id });
@@ -143,7 +144,8 @@ var worker_default = {
           br: pb.br,
           water: pb.water,
           created: pb.created,
-          assignments: pb.assignments || null
+          assignments: pb.assignments || null,
+          assignVersion: pb.assignVersion || 0
         });
       }
       if (parts.length === 4 && parts[3] === "roster") {
@@ -183,8 +185,9 @@ var worker_default = {
           main: main || [],
           screening: screening || []
         };
+        pb.assignVersion = (pb.assignVersion || 0) + 1;
         await savePB(kvKey, pb);
-        return json({ ok: true });
+        return json({ ok: true, assignVersion: pb.assignVersion });
       }
       if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
         const body = await request.json();
@@ -194,8 +197,9 @@ var worker_default = {
         pb.time = time;
         pb.br = br;
         pb.water = water;
+        pb.assignVersion = (pb.assignVersion || 0) + 1;
         await savePB(kvKey, pb);
-        return json({ ok: true });
+        return json({ ok: true, assignVersion: pb.assignVersion });
       }
       return json({ error: "Not found" }, 404);
     }
@@ -244,7 +248,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-eNEV6a/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-bx4DJo/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -276,7 +280,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-eNEV6a/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-bx4DJo/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

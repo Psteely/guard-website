@@ -1,5 +1,3 @@
-// assets/assign.js — PB editing, assignments, drag/drop, autosave
-
 import {
   verifyOfficerStatus,
   requireOfficer
@@ -7,9 +5,6 @@ import {
 
 const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
-// ------------------------------
-// PB ID
-// ------------------------------
 const url = new URL(window.location.href);
 const pbId = url.searchParams.get("id");
 
@@ -23,10 +18,8 @@ document.getElementById("backLink").href = `/pb/roster.html?id=${pbId}`;
 let roster = [];
 let assignments = { main: [], screening: [] };
 let brLimit = 0;
+let assignVersion = 0;
 
-// ------------------------------
-// COUNTDOWN TIMER
-// ------------------------------
 let countdownInterval = null;
 
 function startCountdown(pbDate, pbTime) {
@@ -51,13 +44,9 @@ function startCountdown(pbDate, pbTime) {
 
     document.getElementById("countdownTimer").textContent =
       `${days}d ${hours}h ${mins}m ${secs}s`;
-
   }, 1000);
 }
 
-// ------------------------------
-// SAVING INDICATOR
-// ------------------------------
 let saveTimeout = null;
 
 function showSaving() {
@@ -98,9 +87,6 @@ function scheduleSave() {
   }, 500);
 }
 
-// ------------------------------
-// LOAD PB METADATA
-// ------------------------------
 async function loadPBInfo() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
   if (!res.ok) return;
@@ -118,15 +104,13 @@ async function loadPBInfo() {
   document.getElementById("mainBRLimit").textContent = brLimit;
 
   assignments = pb.assignments || { main: [], screening: [] };
+  assignVersion = pb.assignVersion || 0;
 
   startCountdown(pb.date, pb.time);
 
   enablePBMetaEditing(pb);
 }
 
-// ------------------------------
-// ENABLE EDIT MODE FOR OFFICERS
-// ------------------------------
 async function enablePBMetaEditing(pb) {
   const isOfficer = await verifyOfficerStatus();
   if (!isOfficer) return;
@@ -148,9 +132,6 @@ async function enablePBMetaEditing(pb) {
   document.getElementById("pbWaterInput").value = pb.water;
 }
 
-// ------------------------------
-// SAVE UPDATED PB METADATA
-// ------------------------------
 document.getElementById("savePBMeta")?.addEventListener("click", async () => {
   const isOfficer = await verifyOfficerStatus();
   if (!isOfficer) return alert("Officer access required.");
@@ -172,7 +153,6 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      password: "SESSION",
       name,
       date,
       time,
@@ -184,6 +164,9 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
   const data = await res.json();
 
   if (data.ok) {
+    if (typeof data.assignVersion === "number") {
+      assignVersion = data.assignVersion;
+    }
     showSaved();
     await loadPBInfo();
     startCountdown(date, time);
@@ -193,9 +176,6 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
   }
 });
 
-// ------------------------------
-// LOAD ROSTER
-// ------------------------------
 async function loadRoster() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
   roster = await res.json();
@@ -205,9 +185,6 @@ async function loadRoster() {
   enableDragDrop();
 }
 
-// ------------------------------
-// RENDER ROSTER
-// ------------------------------
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
   rosterDiv.innerHTML = "";
@@ -221,9 +198,6 @@ function renderRoster() {
     });
 }
 
-// ------------------------------
-// RENDER ASSIGNMENTS
-// ------------------------------
 function renderAssignments() {
   const mainDiv = document.getElementById("main");
   const screeningDiv = document.getElementById("screening");
@@ -256,14 +230,11 @@ function renderAssignments() {
   updateBRStatus(mainBR);
 }
 
-// ------------------------------
-// BR STATUS
-// ------------------------------
 function updateBRStatus(mainBR) {
   const statusDiv = document.getElementById("brStatus");
   const warningSpan = document.getElementById("brWarning");
 
-  const ratio = mainBR / brLimit;
+  const ratio = brLimit ? mainBR / brLimit : 0;
 
   statusDiv.classList.remove("br-ok", "br-warn", "br-over");
 
@@ -279,9 +250,6 @@ function updateBRStatus(mainBR) {
   }
 }
 
-// ------------------------------
-// CARD CREATION
-// ------------------------------
 function makeCard(p) {
   const div = document.createElement("div");
   div.className = "card draggable";
@@ -292,23 +260,24 @@ function makeCard(p) {
   return div;
 }
 
-// ------------------------------
-// AUTO-SAVE (NO PASSWORD PROMPT)
-// ------------------------------
 async function autoSave() {
   const isOfficer = await verifyOfficerStatus();
   if (!isOfficer) return;
 
   try {
-    await fetch(`${API_BASE}/pb/${pbId}/assign`, {
+    const res = await fetch(`${API_BASE}/pb/${pbId}/assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        password: "SESSION",
         main: assignments.main,
         screening: assignments.screening
       })
     });
+
+    const data = await res.json();
+    if (data.ok && typeof data.assignVersion === "number") {
+      assignVersion = data.assignVersion;
+    }
 
     showSaved();
   } catch (err) {
@@ -316,9 +285,6 @@ async function autoSave() {
   }
 }
 
-// ------------------------------
-// DRAG & DROP
-// ------------------------------
 function enableDragDrop() {
   document.querySelectorAll(".draggable").forEach(el => {
     el.addEventListener("dragstart", e => {
@@ -348,9 +314,6 @@ function enableDragDrop() {
   });
 }
 
-// ------------------------------
-// INITIAL LOAD
-// ------------------------------
 (async () => {
   await requireOfficer();
   await loadPBInfo();
