@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// .wrangler/tmp/bundle-hpQFgK/checked-fetch.js
+// .wrangler/tmp/bundle-RcLORz/checked-fetch.js
 var urls = /* @__PURE__ */ new Set();
 function checkURL(request, init) {
   const url = request instanceof URL ? request : new URL(
@@ -44,6 +44,21 @@ var worker_default = {
       status,
       headers: { "Content-Type": "application/json", ...cors }
     }), "json");
+    async function loadPBById(id) {
+      const { keys } = await env.PB.list();
+      for (const k of keys) {
+        const pb = await env.PB.get(k.name, { type: "json" });
+        if (pb && pb.id === id) {
+          return { pb, kvKey: k.name };
+        }
+      }
+      return { pb: null, kvKey: null };
+    }
+    __name(loadPBById, "loadPBById");
+    async function savePB(kvKey, pb) {
+      await env.PB.put(kvKey, JSON.stringify(pb));
+    }
+    __name(savePB, "savePB");
     if (pathname === "/api/pb/list" && request.method === "GET") {
       const list = [];
       const { keys } = await env.PB.list();
@@ -84,18 +99,12 @@ var worker_default = {
       const parts = pathname.split("/").filter(Boolean);
       const id = parts[2];
       if (parts.length === 3 && request.method === "DELETE") {
-        const targetId = id;
-        const { keys } = await env.PB.list();
-        for (const k of keys) {
-          const pb2 = await env.PB.get(k.name, { type: "json" });
-          if (pb2 && pb2.id === targetId) {
-            await env.PB.delete(k.name);
-            return json({ ok: true });
-          }
-        }
-        return json({ ok: false, error: "PB not found in KV" }, 404);
+        const { pb: pb2, kvKey: kvKey2 } = await loadPBById(id);
+        if (!pb2) return json({ ok: false, error: "PB not found" }, 404);
+        await env.PB.delete(kvKey2);
+        return json({ ok: true });
       }
-      const pb = await env.PB.get(id, { type: "json" });
+      const { pb, kvKey } = await loadPBById(id);
       if (!pb) return json({ error: "Not found" }, 404);
       if (parts.length === 4 && parts[3] === "config") {
         return json({
@@ -123,13 +132,13 @@ var worker_default = {
           ship: body.ship,
           br: body.br
         });
-        await env.PB.put(id, JSON.stringify(pb));
+        await savePB(kvKey, pb);
         return json({ ok: true });
       }
       if (parts.length === 5 && parts[3] === "remove" && request.method === "DELETE") {
         const name = decodeURIComponent(parts[4]);
         pb.roster = (pb.roster || []).filter((p) => p.name !== name);
-        await env.PB.put(id, JSON.stringify(pb));
+        await savePB(kvKey, pb);
         return json({ ok: true });
       }
       if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
@@ -149,7 +158,21 @@ var worker_default = {
           main: main || [],
           screening: screening || []
         };
-        await env.PB.put(id, JSON.stringify(pb));
+        await savePB(kvKey, pb);
+        return json({ ok: true });
+      }
+      if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
+        const body = await request.json();
+        const { password, name, date, time, br, water } = body;
+        if (password !== "Nelson1798") {
+          return json({ ok: false, error: "Forbidden" }, 403);
+        }
+        pb.name = name;
+        pb.date = date;
+        pb.time = time;
+        pb.br = br;
+        pb.water = water;
+        await savePB(kvKey, pb);
         return json({ ok: true });
       }
       return json({ error: "Not found" }, 404);
@@ -199,7 +222,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-hpQFgK/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-RcLORz/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -231,7 +254,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-hpQFgK/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-RcLORz/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

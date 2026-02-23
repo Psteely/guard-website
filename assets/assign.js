@@ -1,4 +1,4 @@
-// assign.js — PB Metadata + BR Totals + Screening BR + Drag/Drop + Debounced Auto-Save + Saving Indicator
+// assign.js — PB Metadata Editing + Countdown + BR Totals + Screening BR + Drag/Drop + Debounced Auto-Save + Saving Indicator
 
 const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
@@ -17,6 +17,38 @@ document.getElementById("backLink").href = `/pb/roster.html?id=${pbId}`;
 let roster = [];
 let assignments = { main: [], screening: [] };
 let brLimit = 0;
+
+// ------------------------------
+// COUNTDOWN TIMER
+// ------------------------------
+
+let countdownInterval = null;
+
+function startCountdown(pbDate, pbTime) {
+  const target = new Date(`${pbDate}T${pbTime}:00Z`).getTime();
+
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  countdownInterval = setInterval(() => {
+    const now = Date.now();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      document.getElementById("countdownTimer").textContent = "Battle is starting!";
+      clearInterval(countdownInterval);
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const mins = Math.floor((diff / (1000 * 60)) % 60);
+    const secs = Math.floor((diff / 1000) % 60);
+
+    document.getElementById("countdownTimer").textContent =
+      `${days}d ${hours}h ${mins}m ${secs}s`;
+
+  }, 1000);
+}
 
 // ------------------------------
 // SAVING INDICATOR
@@ -59,7 +91,7 @@ function scheduleSave() {
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     autoSave();
-  }, 500); // waits 0.5 seconds after last drag
+  }, 500);
 }
 
 // ------------------------------
@@ -72,17 +104,94 @@ async function loadPBInfo() {
 
   const pb = await res.json();
 
+  // Display text
   document.getElementById("pbTitle").textContent = pb.name;
-  document.getElementById("pbDate").textContent = pb.date || "N/A";
-  document.getElementById("pbTime").textContent = pb.time || "N/A";
-  document.getElementById("pbBR").textContent = pb.br || "N/A";
-  document.getElementById("pbWater").textContent = pb.water || "N/A";
+  document.getElementById("pbNameText").textContent = pb.name;
+  document.getElementById("pbDateText").textContent = pb.date;
+  document.getElementById("pbTimeText").textContent = pb.time;
+  document.getElementById("pbBRText").textContent = pb.br;
+  document.getElementById("pbWaterText").textContent = pb.water;
 
+  // BR limit
   brLimit = Number(pb.br) || 0;
   document.getElementById("mainBRLimit").textContent = brLimit;
 
   assignments = pb.assignments || { main: [], screening: [] };
+
+  // Start countdown
+  startCountdown(pb.date, pb.time);
+
+  // Enable editing if officer
+  enablePBMetaEditing(pb);
 }
+
+// ------------------------------
+// ENABLE EDIT MODE FOR OFFICERS
+// ------------------------------
+
+function enablePBMetaEditing(pb) {
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
+  if (!isOfficer) return;
+
+  document.querySelectorAll(".officerOnly").forEach(el => {
+    el.style.display = "inline-block";
+  });
+
+  document.getElementById("pbNameText").style.display = "none";
+  document.getElementById("pbDateText").style.display = "none";
+  document.getElementById("pbTimeText").style.display = "none";
+  document.getElementById("pbBRText").style.display = "none";
+  document.getElementById("pbWaterText").style.display = "none";
+
+  document.getElementById("pbNameInput").value = pb.name;
+  document.getElementById("pbDateInput").value = pb.date;
+  document.getElementById("pbTimeInput").value = pb.time;
+  document.getElementById("pbBRInput").value = pb.br;
+  document.getElementById("pbWaterInput").value = pb.water;
+}
+
+// ------------------------------
+// SAVE UPDATED PB METADATA
+// ------------------------------
+
+document.getElementById("savePBMeta")?.addEventListener("click", async () => {
+  const name = document.getElementById("pbNameInput").value.trim();
+  const date = document.getElementById("pbDateInput").value;
+  const time = document.getElementById("pbTimeInput").value;
+  const br = document.getElementById("pbBRInput").value;
+  const water = document.getElementById("pbWaterInput").value;
+
+  if (!name || !date || !time || !br || !water) {
+    alert("Please fill in all fields.");
+    return;
+  }
+
+  showSaving();
+
+  const res = await fetch(`${API_BASE}/pb/${pbId}/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      password: "Nelson1798",
+      name,
+      date,
+      time,
+      br,
+      water
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.ok) {
+    showSaved();
+    await loadPBInfo();
+    startCountdown(date, time);
+    renderAssignments();
+  } else {
+    alert("Failed to update battle details.");
+  }
+});
 
 // ------------------------------
 // LOAD ROSTER
@@ -128,7 +237,6 @@ function renderAssignments() {
   let mainBR = 0;
   let screeningBR = 0;
 
-  // MAIN
   assignments.main.forEach(name => {
     const p = roster.find(x => x.name === name);
     if (p) {
@@ -137,7 +245,6 @@ function renderAssignments() {
     }
   });
 
-  // SCREENING
   assignments.screening.forEach(name => {
     const p = roster.find(x => x.name === name);
     if (p) {
@@ -146,7 +253,6 @@ function renderAssignments() {
     }
   });
 
-  // Update BR totals
   document.getElementById("mainBR").textContent = mainBR;
   document.getElementById("screeningBR").textContent = screeningBR;
 
@@ -192,7 +298,7 @@ function makeCard(p) {
 }
 
 // ------------------------------
-// AUTO-SAVE (DEBOUNCED)
+// AUTO-SAVE
 // ------------------------------
 
 async function autoSave() {

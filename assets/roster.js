@@ -1,4 +1,4 @@
-// roster.js — READ-ONLY VERSION WITH PB METADATA + BR TOTALS + BR WARNINGS + OFFICER LOGIN
+// roster.js — PB Metadata + BR Totals + Countdown Timer + Officer Mode
 
 const API_BASE = "https://soft-queen-933f.peter-steely.workers.dev/api";
 
@@ -10,7 +10,6 @@ const OFFICER_PASSWORD = "Nelson1798";
 
 function checkOfficerStatus() {
   const isOfficer = localStorage.getItem("isOfficer") === "true";
-
   document.querySelectorAll(".officerOnly").forEach(el => {
     el.style.display = isOfficer ? "inline-block" : "none";
   });
@@ -18,7 +17,6 @@ function checkOfficerStatus() {
 
 document.getElementById("officerLoginBtn")?.addEventListener("click", () => {
   const entered = prompt("Enter officer password:");
-
   if (entered === OFFICER_PASSWORD) {
     localStorage.setItem("isOfficer", "true");
     alert("Officer access granted.");
@@ -43,22 +41,55 @@ if (!pbId) {
 // Links
 document.getElementById("signupLink").href = `/pb/signup.html?id=${pbId}`;
 document.getElementById("officerLink").href = `/pb/assign.html?id=${pbId}`;
+document.getElementById("backLink").href = `/pb/index.html`;
 
 let currentAssignments = null;
 let currentRoster = [];
 let brLimit = 0;
 
-// Load PB info (name + date + time + BR + water + assignments)
+// ------------------------------
+// COUNTDOWN TIMER
+// ------------------------------
+
+let countdownInterval = null;
+
+function startCountdown(pbDate, pbTime) {
+  const target = new Date(`${pbDate}T${pbTime}:00Z`).getTime();
+
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  countdownInterval = setInterval(() => {
+    const now = Date.now();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      document.getElementById("countdownTimer").textContent = "Battle is starting!";
+      clearInterval(countdownInterval);
+      return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const mins = Math.floor((diff / (1000 * 60)) % 60);
+    const secs = Math.floor((diff / 1000) % 60);
+
+    document.getElementById("countdownTimer").textContent =
+      `${days}d ${hours}h ${mins}m ${secs}s`;
+
+  }, 1000);
+}
+
+// ------------------------------
+// LOAD PB INFO
+// ------------------------------
+
 async function loadPBInfo() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
   if (!res.ok) return;
 
   const pb = await res.json();
 
-  // Title
   document.getElementById("pbTitle").textContent = pb.name;
-
-  // Metadata
   document.getElementById("pbDate").textContent = pb.date || "N/A";
   document.getElementById("pbTime").textContent = pb.time || "N/A";
   document.getElementById("pbBR").textContent = pb.br || "N/A";
@@ -68,12 +99,15 @@ async function loadPBInfo() {
   document.getElementById("mainBRLimit").textContent = brLimit;
 
   currentAssignments = pb.assignments || null;
+
+  // Start countdown
+  startCountdown(pb.date, pb.time);
 }
 
-// Back to roster
-document.getElementById("backLink").href = `/pb/index.html`;
+// ------------------------------
+// LOAD ROSTER
+// ------------------------------
 
-// Load roster from backend
 async function loadRoster() {
   try {
     const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
@@ -89,7 +123,6 @@ async function loadRoster() {
     } else {
       let html = "<ul>";
 
-      // Build a set of assigned names
       const assigned = new Set([
         ...(currentAssignments?.main || []),
         ...(currentAssignments?.screening || [])
@@ -111,7 +144,6 @@ async function loadRoster() {
       document.getElementById("roster").innerHTML = html;
     }
 
-    // Render assignments AFTER roster loads
     renderAssignments();
 
   } catch (err) {
@@ -120,7 +152,10 @@ async function loadRoster() {
   }
 }
 
-// Render assignments in read-only officer-style layout
+// ------------------------------
+// RENDER ASSIGNMENTS
+// ------------------------------
+
 function renderAssignments() {
   const mainView = document.getElementById("mainView");
   const screeningView = document.getElementById("screeningView");
@@ -144,7 +179,6 @@ function renderAssignments() {
   let mainBR = 0;
   let screeningBR = 0;
 
-  // MAIN PORT BATTLE
   if (currentAssignments.main?.length) {
     currentAssignments.main.forEach(name => {
       const p = currentRoster.find(x => x.name === name);
@@ -153,11 +187,8 @@ function renderAssignments() {
         mainView.appendChild(makeCard(p));
       }
     });
-  } else {
-    mainView.innerHTML = "<p>No captains assigned.</p>";
   }
 
-  // SCREENING
   if (currentAssignments.screening?.length) {
     currentAssignments.screening.forEach(name => {
       const p = currentRoster.find(x => x.name === name);
@@ -166,18 +197,18 @@ function renderAssignments() {
         screeningView.appendChild(makeCard(p));
       }
     });
-  } else {
-    screeningView.innerHTML = "<p>No captains assigned.</p>";
   }
 
-  // Update BR totals
   document.getElementById("mainBR").textContent = mainBR;
   document.getElementById("screeningBR").textContent = screeningBR;
 
   updateBRStatus(mainBR);
 }
 
-// Update BR status block
+// ------------------------------
+// BR STATUS
+// ------------------------------
+
 function updateBRStatus(mainBR) {
   const statusDiv = document.getElementById("mainBRStatus");
   const warningSpan = document.getElementById("mainBRWarning");
@@ -198,7 +229,10 @@ function updateBRStatus(mainBR) {
   }
 }
 
-// Handle withdraw button clicks
+// ------------------------------
+// WITHDRAW
+// ------------------------------
+
 document.addEventListener("click", async (e) => {
   if (!e.target.classList.contains("withdraw")) return;
 
@@ -215,7 +249,7 @@ document.addEventListener("click", async (e) => {
     const data = await res.json();
 
     if (data.ok) {
-      await loadRoster(); // refresh roster + assignments
+      await loadRoster();
     } else {
       alert("Failed to remove player.");
     }
@@ -225,9 +259,12 @@ document.addEventListener("click", async (e) => {
   }
 });
 
-// Initial load
+// ------------------------------
+// INITIAL LOAD
+// ------------------------------
+
 (async () => {
   await loadPBInfo();
   await loadRoster();
-  checkOfficerStatus();   // <-- IMPORTANT
+  checkOfficerStatus();
 })();

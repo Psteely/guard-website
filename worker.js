@@ -19,7 +19,24 @@ export default {
         headers: { "Content-Type": "application/json", ...cors }
       });
 
-    // LIST PBs      
+    // Utility: Load PB by internal pb.id, not KV key
+    async function loadPBById(id) {
+      const { keys } = await env.PB.list();
+      for (const k of keys) {
+        const pb = await env.PB.get(k.name, { type: "json" });
+        if (pb && pb.id === id) {
+          return { pb, kvKey: k.name };
+        }
+      }
+      return { pb: null, kvKey: null };
+    }
+
+    // Utility: Save PB using correct KV key
+    async function savePB(kvKey, pb) {
+      await env.PB.put(kvKey, JSON.stringify(pb));
+    }
+
+    // LIST PBs
     if (pathname === "/api/pb/list" && request.method === "GET") {
       const list = [];
       const { keys } = await env.PB.list();
@@ -46,7 +63,6 @@ export default {
     if (pathname === "/api/pb/create" && request.method === "POST") {
       const body = await request.json();
 
-      // FIXED: random ID generation for service-worker mode
       const id =
         crypto.randomUUID?.() ||
         crypto.getRandomValues(new Uint8Array(16)).join("");
@@ -74,21 +90,15 @@ export default {
 
       // SAFE DELETE
       if (parts.length === 3 && request.method === "DELETE") {
-        const targetId = id;
+        const { pb, kvKey } = await loadPBById(id);
+        if (!pb) return json({ ok: false, error: "PB not found" }, 404);
 
-        const { keys } = await env.PB.list();
-        for (const k of keys) {
-          const pb = await env.PB.get(k.name, { type: "json" });
-          if (pb && pb.id === targetId) {
-            await env.PB.delete(k.name);
-            return json({ ok: true });
-          }
-        }
-
-        return json({ ok: false, error: "PB not found in KV" }, 404);
+        await env.PB.delete(kvKey);
+        return json({ ok: true });
       }
 
-      const pb = await env.PB.get(id, { type: "json" });
+      // Load PB
+      const { pb, kvKey } = await loadPBById(id);
       if (!pb) return json({ error: "Not found" }, 404);
 
       // CONFIG
@@ -125,7 +135,7 @@ export default {
           br: body.br
         });
 
-        await env.PB.put(id, JSON.stringify(pb));
+        await savePB(kvKey, pb);
         return json({ ok: true });
       }
 
@@ -134,11 +144,11 @@ export default {
         const name = decodeURIComponent(parts[4]);
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
 
-        await env.PB.put(id, JSON.stringify(pb));
+        await savePB(kvKey, pb);
         return json({ ok: true });
       }
 
-      // ASSIGN     
+      // ASSIGN
       if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
         const body = await request.json();
         const { password, main, screening } = body;
@@ -160,7 +170,26 @@ export default {
           screening: screening || []
         };
 
-        await env.PB.put(id, JSON.stringify(pb));
+        await savePB(kvKey, pb);
+        return json({ ok: true });
+      }
+
+      // UPDATE PB METADATA
+      if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
+        const body = await request.json();
+        const { password, name, date, time, br, water } = body;
+
+        if (password !== "Nelson1798") {
+          return json({ ok: false, error: "Forbidden" }, 403);
+        }
+
+        pb.name = name;
+        pb.date = date;
+        pb.time = time;
+        pb.br = br;
+        pb.water = water;
+
+        await savePB(kvKey, pb);
         return json({ ok: true });
       }
 

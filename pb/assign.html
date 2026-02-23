@@ -37,12 +37,60 @@
 
     <h1 class="page-title" id="pbTitle"></h1>
 
-    <!-- PB Metadata -->
+    <!-- PB Metadata (Editable for Officers) -->
     <div id="pbMeta" style="margin-bottom:20px; color:#ccc; line-height:1.4em;">
-      <div><strong>Date:</strong> <span id="pbDate"></span></div>
-      <div><strong>Time:</strong> <span id="pbTime"></span></div>
-      <div><strong>BR Limit:</strong> <span id="pbBR"></span></div>
-      <div><strong>Water:</strong> <span id="pbWater"></span></div>
+
+      <div>
+        <strong>Name:</strong>
+        <span id="pbNameText"></span>
+        <input id="pbNameInput" class="officerOnly" style="display:none; width:200px;">
+      </div>
+
+      <div>
+        <strong>Date (GMT):</strong>
+        <span id="pbDateText"></span>
+        <input id="pbDateInput" type="date" class="officerOnly" style="display:none;">
+      </div>
+
+      <div>
+        <strong>Time (GMT):</strong>
+        <span id="pbTimeText"></span>
+        <input id="pbTimeInput" type="time" class="officerOnly" style="display:none;">
+      </div>
+
+      <div>
+        <strong>BR Limit:</strong>
+        <span id="pbBRText"></span>
+        <input id="pbBRInput" type="number" class="officerOnly" style="display:none; width:80px;">
+      </div>
+
+      <div>
+        <strong>Water:</strong>
+        <span id="pbWaterText"></span>
+        <select id="pbWaterInput" class="officerOnly" style="display:none;">
+          <option value="shallow">Shallow</option>
+          <option value="deep">Deep</option>
+        </select>
+      </div>
+
+      <button id="savePBMeta" class="officerOnly" style="display:none; margin-top:10px;">
+        Save Battle Details
+      </button>
+    </div>
+
+    <!-- COUNTDOWN TIMER -->
+    <div id="pbCountdown" style="
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid #446;
+      border-radius: 8px;
+      font-size: 1.6em;
+      color: #8cf;
+      text-align: center;
+      font-weight: bold;
+    ">
+      Battle starts in: <span id="countdownTimer">Loading…</span>
     </div>
 
     <h2>Assignments</h2>
@@ -51,7 +99,6 @@
       <div class="column">
         <h3>Main Port Battle</h3>
 
-        <!-- MAIN BR STATUS BLOCK -->
         <div id="brStatus" class="br-status br-ok">
           <strong>Total BR:</strong> <span id="mainBR">0</span>
           <strong> / </strong>
@@ -65,7 +112,6 @@
       <div class="column">
         <h3>Screening</h3>
 
-        <!-- NEW SCREENING BR BLOCK -->
         <div id="screeningBRStatus" class="br-status br-ok">
           <strong>Total BR:</strong> <span id="screeningBR">0</span>
         </div>
