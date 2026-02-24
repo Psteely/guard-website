@@ -185,27 +185,53 @@ function updateBRStatus(mainBR) {
 }
 
 // ------------------------------
-// REAL‑TIME POLLING
+// SSE STREAMING (PRIMARY METHOD)
 // ------------------------------
-async function pollForUpdates() {
-  try {
-    const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
-    if (!res.ok) return;
+function startSSE() {
+  const streamUrl = `${API_BASE}/pb/${pbId}/stream`;
+  const evtSource = new EventSource(streamUrl);
 
-    const pb = await res.json();
-    const newVersion = pb.assignVersion || 0;
+  console.log("SSE: Connecting to stream…");
 
-    if (newVersion !== assignVersion) {
-      assignVersion = newVersion;
-      assignments = pb.assignments || { main: [], screening: [] };
+  evtSource.onmessage = async (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.assignVersion !== assignVersion) {
+      assignVersion = data.assignVersion;
+      assignments = data.assignments;
       await loadRoster();
     }
-  } catch (err) {
-    console.error("Polling failed:", err);
-  }
+  };
+
+  evtSource.onerror = () => {
+    console.warn("SSE failed — falling back to polling");
+    evtSource.close();
+    startPollingFallback();
+  };
 }
 
-setInterval(pollForUpdates, 5000);
+// ------------------------------
+// POLLING FALLBACK (30s)
+// ------------------------------
+function startPollingFallback() {
+  setInterval(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
+      if (!res.ok) return;
+
+      const pb = await res.json();
+      const newVersion = pb.assignVersion || 0;
+
+      if (newVersion !== assignVersion) {
+        assignVersion = newVersion;
+        assignments = pb.assignments || { main: [], screening: [] };
+        await loadRoster();
+      }
+    } catch (err) {
+      console.error("Polling failed:", err);
+    }
+  }, 30000);
+}
 
 // ------------------------------
 // INITIAL LOAD
@@ -217,7 +243,12 @@ setInterval(pollForUpdates, 5000);
   const isOfficer = await verifyOfficerStatus();
   if (isOfficer) {
     const link = document.getElementById("assignLink");
-    if (link) link.style.display = "inline-block";
-    link.href = `/pb/assign.html?id=${pbId}`;
+    if (link) {
+      link.style.display = "inline-block";
+      link.href = `/pb/assign.html?id=${pbId}`;
+    }
   }
+
+  // Start SSE (fallback handled automatically)
+  startSSE();
 })();

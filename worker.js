@@ -34,6 +34,63 @@ export default {
       await env.PB.put(kvKey, JSON.stringify(pb));
     }
 
+    // ---------------- SSE STREAM HANDLER (CLOUDFLARE-SAFE) ----------------
+    async function streamPBUpdates(id, env) {
+      const { pb } = await loadPBById(id);
+      if (!pb) {
+        return new Response("PB not found", { status: 404 });
+      }
+
+      const encoder = new TextEncoder();
+
+      const headers = {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "Access-Control-Allow-Origin": "*"
+      };
+
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            let lastVersion = pb.assignVersion || 0;
+
+            // Send initial state
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({
+                  assignVersion: lastVersion,
+                  assignments: pb.assignments || { main: [], screening: [] }
+                })}\n\n`
+              )
+            );
+
+            // Loop forever, checking KV every 2 seconds
+            while (true) {
+              await new Promise(r => setTimeout(r, 2000));
+
+              const { pb: updated } = await loadPBById(id);
+              if (!updated) continue;
+
+              if (updated.assignVersion !== lastVersion) {
+                lastVersion = updated.assignVersion;
+
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      assignVersion: updated.assignVersion,
+                      assignments: updated.assignments || { main: [], screening: [] }
+                    })}\n\n`
+                  )
+                );
+              }
+            }
+          }
+        }),
+        { headers }
+      );
+    }
+
     // ---------------- OFFICER PASSWORD (LOGIN + VERSION) ----------------
 
     if (pathname === "/api/officer/version" && request.method === "GET") {
@@ -127,6 +184,7 @@ export default {
       const parts = pathname.split("/").filter(Boolean);
       const id = parts[2];
 
+      // DELETE PB
       if (parts.length === 3 && request.method === "DELETE") {
         const { pb, kvKey } = await loadPBById(id);
         if (!pb) return json({ ok: false, error: "PB not found" }, 404);
@@ -138,6 +196,12 @@ export default {
       const { pb, kvKey } = await loadPBById(id);
       if (!pb) return json({ error: "Not found" }, 404);
 
+      // SSE STREAM ENDPOINT
+      if (parts.length === 4 && parts[3] === "stream") {
+        return streamPBUpdates(id, env);
+      }
+
+      // CONFIG
       if (parts.length === 4 && parts[3] === "config") {
         return json({
           id: pb.id,
@@ -152,10 +216,12 @@ export default {
         });
       }
 
+      // ROSTER
       if (parts.length === 4 && parts[3] === "roster") {
         return json(pb.roster || []);
       }
 
+      // SIGNUP
       if (parts.length === 4 && parts[3] === "signup" && request.method === "POST") {
         const body = await request.json();
         pb.roster = pb.roster || [];
@@ -174,6 +240,7 @@ export default {
         return json({ ok: true });
       }
 
+      // REMOVE FROM ROSTER
       if (parts.length === 5 && parts[3] === "remove" && request.method === "DELETE") {
         const name = decodeURIComponent(parts[4]);
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
@@ -182,7 +249,7 @@ export default {
         return json({ ok: true });
       }
 
-      // ASSIGN — increments assignVersion
+      // ASSIGN
       if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
         const body = await request.json();
         const { main, screening } = body;
@@ -206,7 +273,7 @@ export default {
         return json({ ok: true, assignVersion: pb.assignVersion });
       }
 
-      // UPDATE PB METADATA — also bumps assignVersion (so roster refreshes)
+      // UPDATE PB METADATA
       if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
         const body = await request.json();
         const { name, date, time, br, water } = body;
