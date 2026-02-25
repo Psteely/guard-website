@@ -96,7 +96,7 @@ function isAssigned(name) {
 }
 
 // ------------------------------
-// RENDER ROSTER
+// RENDER ROSTER (WITH WITHDRAW BUTTON)
 // ------------------------------
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
@@ -104,13 +104,45 @@ function renderRoster() {
 
   rosterDiv.innerHTML = "";
 
+  const myName = localStorage.getItem("captainName");
+
   roster.forEach(p => {
     const div = document.createElement("div");
     div.className = "card";
 
     const tick = isAssigned(p.name) ? " ✔️" : "";
-
     div.textContent = `${p.name} — ${p.ship} (${p.br} BR)${tick}`;
+
+    // Add withdraw button only for the logged-in captain
+    if (p.name === myName) {
+      const btn = document.createElement("button");
+      btn.textContent = "Withdraw";
+      btn.className = "withdrawBtn";
+      btn.style.marginLeft = "10px";
+
+      btn.onclick = async () => {
+        if (!confirm("Are you sure you want to withdraw from this PB?")) return;
+
+        const res = await fetch(
+          `${API_BASE}/pb/${pbId}/withdraw/${encodeURIComponent(myName)}`,
+          { method: "DELETE" }
+        );
+
+        const data = await res.json();
+        if (!data.ok) {
+          alert("Failed to withdraw.");
+          return;
+        }
+
+        // Clear identity so they can't withdraw again
+        localStorage.removeItem("captainName");
+
+        // Update immediately; SSE will update others
+        await loadRoster();
+      };
+
+      div.appendChild(btn);
+    }
 
     rosterDiv.appendChild(div);
   });

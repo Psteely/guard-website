@@ -19,27 +19,48 @@ export default {
         headers: { "Content-Type": "application/json", ...cors }
       });
 
-    async function loadPBById(id) {
-      const { keys } = await env.PB.list();
-      for (const k of keys) {
-        const pb = await env.PB.get(k.name, { type: "json" });
-        if (pb && pb.id === id) {
-          return { pb, kvKey: k.name };
-        }
+    // ------------------------------
+    // PB INDEX HELPERS
+    // ------------------------------
+
+    async function loadIndex(env) {
+      const raw = await env.PB.get("PB_INDEX", { type: "json" });
+      return Array.isArray(raw) ? raw : [];
+    }
+
+    async function saveIndex(env, arr) {
+      await env.PB.put("PB_INDEX", JSON.stringify(arr));
+    }
+
+    async function addToIndex(env, id) {
+      const idx = await loadIndex(env);
+      if (!idx.includes(id)) {
+        idx.push(id);
+        await saveIndex(env, idx);
       }
-      return { pb: null, kvKey: null };
     }
 
-    async function savePB(kvKey, pb) {
-      await env.PB.put(kvKey, JSON.stringify(pb));
+    async function removeFromIndex(env, id) {
+      const idx = await loadIndex(env);
+      const filtered = idx.filter(x => x !== id);
+      await saveIndex(env, filtered);
     }
 
-    // ---------------- SSE STREAM HANDLER (CLOUDFLARE-SAFE) ----------------
+    async function loadPB(env, id) {
+      return await env.PB.get(id, { type: "json" });
+    }
+
+    async function savePB(env, id, pb) {
+      await env.PB.put(id, JSON.stringify(pb));
+    }
+
+    // ------------------------------
+    // SSE STREAM
+    // ------------------------------
+
     async function streamPBUpdates(id, env) {
-      const { pb } = await loadPBById(id);
-      if (!pb) {
-        return new Response("PB not found", { status: 404 });
-      }
+      const pb = await loadPB(env, id);
+      if (!pb) return new Response("PB not found", { status: 404, headers: cors });
 
       const encoder = new TextEncoder();
 
@@ -55,7 +76,6 @@ export default {
           async start(controller) {
             let lastVersion = pb.assignVersion || 0;
 
-            // Send initial state
             controller.enqueue(
               encoder.encode(
                 `data: ${JSON.stringify({
@@ -65,11 +85,10 @@ export default {
               )
             );
 
-            // Loop forever, checking KV every 2 seconds
             while (true) {
               await new Promise(r => setTimeout(r, 2000));
 
-              const { pb: updated } = await loadPBById(id);
+              const updated = await loadPB(env, id);
               if (!updated) continue;
 
               if (updated.assignVersion !== lastVersion) {
@@ -91,31 +110,23 @@ export default {
       );
     }
 
-    // ---------------- OFFICER PASSWORD (LOGIN + VERSION) ----------------
+    // ------------------------------
+    // OFFICER PASSWORD
+    // ------------------------------
 
     if (pathname === "/api/officer/version" && request.method === "GET") {
       const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
-      if (!data) return json({ version: 0 });
-      return json({ version: data.version });
+      return json({ version: data?.version || 0 });
     }
 
     if (pathname === "/api/officer/check" && request.method === "POST") {
-      const body = await request.json();
-      const { password } = body;
-
+      const { password } = await request.json();
       const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
-
-      if (!data || data.password !== password) {
-        return json({ ok: false });
-      }
-
-      return json({ ok: true, version: data.version });
+      return json({ ok: data?.password === password, version: data?.version || 0 });
     }
 
     if (pathname === "/api/officer/password" && request.method === "POST") {
-      const body = await request.json();
-      const { oldPassword, newPassword } = body;
-
+      const { oldPassword, newPassword } = await request.json();
       const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
 
       if (!data || data.password !== oldPassword) {
@@ -128,33 +139,47 @@ export default {
       };
 
       await env.PB.put("OFFICER_PASSWORD", JSON.stringify(updated));
-
       return json({ ok: true });
     }
 
-    // ---------------- PB ROUTES ----------------
+    // ------------------------------
+    // PB LIST (NO KV.list())
+    // ------------------------------
 
     if (pathname === "/api/pb/list" && request.method === "GET") {
-      const list = [];
-      const { keys } = await env.PB.list();
+      try {
+        const ids = await loadIndex(env);
+        const list = [];
 
-      for (const k of keys) {
-        const pb = await env.PB.get(k.name, { type: "json" });
-        if (pb && pb.id) {
-          list.push({
-            id: pb.id,
-            name: pb.name,
-            date: pb.date,
-            time: pb.time,
-            br: pb.br,
-            water: pb.water,
-            created: pb.created
-          });
+        for (const id of ids) {
+          try {
+            const pb = await loadPB(env, id);
+            if (!pb) continue;
+
+            list.push({
+              id: pb.id,
+              name: pb.name || "Unnamed PB",
+              date: pb.date || "",
+              time: pb.time || "",
+              br: pb.br || "",
+              water: pb.water || "",
+              created: pb.created || 0
+            });
+          } catch (err) {
+            console.error("Bad PB entry:", id, err);
+          }
         }
-      }
 
-      return json(list);
+        return json(list);
+      } catch (err) {
+        console.error("PB LIST ERROR:", err);
+        return json({ error: "Failed to load PB list" }, 500);
+      }
     }
+
+    // ------------------------------
+    // PB CREATE
+    // ------------------------------
 
     if (pathname === "/api/pb/create" && request.method === "POST") {
       const body = await request.json();
@@ -176,33 +201,37 @@ export default {
         assignVersion: 0
       };
 
-      await env.PB.put(id, JSON.stringify(pb));
+      await savePB(env, id, pb);
+      await addToIndex(env, id);
+
       return json({ ok: true, id });
     }
+
+    // ------------------------------
+    // PB-SPECIFIC ROUTES
+    // ------------------------------
 
     if (pathname.startsWith("/api/pb/")) {
       const parts = pathname.split("/").filter(Boolean);
       const id = parts[2];
 
+      const pb = await loadPB(env, id);
+      if (!pb) return json({ error: "Not found" }, 404);
+
       // DELETE PB
       if (parts.length === 3 && request.method === "DELETE") {
-        const { pb, kvKey } = await loadPBById(id);
-        if (!pb) return json({ ok: false, error: "PB not found" }, 404);
-
-        await env.PB.delete(kvKey);
+        await env.PB.delete(id);
+        await removeFromIndex(env, id);
         return json({ ok: true });
       }
 
-      const { pb, kvKey } = await loadPBById(id);
-      if (!pb) return json({ error: "Not found" }, 404);
-
-      // SSE STREAM ENDPOINT
-      if (parts.length === 4 && parts[3] === "stream") {
+      // STREAM
+      if (parts[3] === "stream") {
         return streamPBUpdates(id, env);
       }
 
       // CONFIG
-      if (parts.length === 4 && parts[3] === "config") {
+      if (parts[3] === "config") {
         return json({
           id: pb.id,
           name: pb.name,
@@ -217,12 +246,12 @@ export default {
       }
 
       // ROSTER
-      if (parts.length === 4 && parts[3] === "roster") {
+      if (parts[3] === "roster" && request.method === "GET") {
         return json(pb.roster || []);
       }
 
       // SIGNUP
-      if (parts.length === 4 && parts[3] === "signup" && request.method === "POST") {
+      if (parts[3] === "signup" && request.method === "POST") {
         const body = await request.json();
         pb.roster = pb.roster || [];
 
@@ -236,27 +265,43 @@ export default {
           br: body.br
         });
 
-        await savePB(kvKey, pb);
+        await savePB(env, id, pb);
         return json({ ok: true });
       }
 
-      // REMOVE FROM ROSTER
-      if (parts.length === 5 && parts[3] === "remove" && request.method === "DELETE") {
+      // REMOVE (officer)
+      if (parts[3] === "remove" && request.method === "DELETE") {
         const name = decodeURIComponent(parts[4]);
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
 
-        await savePB(kvKey, pb);
+        await savePB(env, id, pb);
+        return json({ ok: true });
+      }
+
+      // WITHDRAW (captain)
+      if (parts[3] === "withdraw" && request.method === "DELETE") {
+        const name = decodeURIComponent(parts[4]);
+
+        pb.roster = (pb.roster || []).filter(p => p.name !== name);
+
+        if (pb.assignments) {
+          pb.assignments.main = (pb.assignments.main || []).filter(n => n !== name);
+          pb.assignments.screening = (pb.assignments.screening || []).filter(n => n !== name);
+        }
+
+        pb.assignVersion = (pb.assignVersion || 0) + 1;
+
+        await savePB(env, id, pb);
         return json({ ok: true });
       }
 
       // ASSIGN
-      if (parts.length === 4 && parts[3] === "assign" && request.method === "POST") {
-        const body = await request.json();
-        const { main, screening } = body;
+      if (parts[3] === "assign" && request.method === "POST") {
+        const { main, screening } = await request.json();
 
         const set = new Set();
-        for (const n of main) set.add(n);
-        for (const n of screening) {
+        for (const n of main || []) set.add(n);
+        for (const n of screening || []) {
           if (set.has(n)) {
             return json({ ok: false, error: "Duplicate captain in both groups" }, 400);
           }
@@ -269,14 +314,13 @@ export default {
 
         pb.assignVersion = (pb.assignVersion || 0) + 1;
 
-        await savePB(kvKey, pb);
+        await savePB(env, id, pb);
         return json({ ok: true, assignVersion: pb.assignVersion });
       }
 
       // UPDATE PB METADATA
-      if (parts.length === 4 && parts[3] === "update" && request.method === "POST") {
-        const body = await request.json();
-        const { name, date, time, br, water } = body;
+      if (parts[3] === "update" && request.method === "POST") {
+        const { name, date, time, br, water } = await request.json();
 
         pb.name = name;
         pb.date = date;
@@ -286,7 +330,7 @@ export default {
 
         pb.assignVersion = (pb.assignVersion || 0) + 1;
 
-        await savePB(kvKey, pb);
+        await savePB(env, id, pb);
         return json({ ok: true, assignVersion: pb.assignVersion });
       }
 
