@@ -1,7 +1,11 @@
+console.log("assign.js loaded");
+
 import {
   verifyOfficerStatus,
   requireOfficer
 } from "./auth.js";
+
+
 
 const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
@@ -21,6 +25,10 @@ let brLimit = 0;
 let assignVersion = 0;
 
 let countdownInterval = null;
+
+// ------------------------------
+// COUNTDOWN TIMER
+// ------------------------------
 
 function startCountdown(pbDate, pbTime) {
   const target = new Date(`${pbDate}T${pbTime}:00Z`).getTime();
@@ -46,6 +54,10 @@ function startCountdown(pbDate, pbTime) {
       `${days}d ${hours}h ${mins}m ${secs}s`;
   }, 1000);
 }
+
+// ------------------------------
+// SAVE INDICATORS
+// ------------------------------
 
 let saveTimeout = null;
 
@@ -87,6 +99,10 @@ function scheduleSave() {
   }, 500);
 }
 
+// ------------------------------
+// LOAD PB INFO
+// ------------------------------
+
 async function loadPBInfo() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
   if (!res.ok) return;
@@ -111,6 +127,10 @@ async function loadPBInfo() {
   enablePBMetaEditing(pb);
 }
 
+// ------------------------------
+// ENABLE PB META EDITING
+// ------------------------------
+
 async function enablePBMetaEditing(pb) {
   const isOfficer = await verifyOfficerStatus();
   if (!isOfficer) return;
@@ -131,6 +151,10 @@ async function enablePBMetaEditing(pb) {
   document.getElementById("pbBRInput").value = pb.br;
   document.getElementById("pbWaterInput").value = pb.water;
 }
+
+// ------------------------------
+// SAVE PB META
+// ------------------------------
 
 document.getElementById("savePBMeta")?.addEventListener("click", async () => {
   const isOfficer = await verifyOfficerStatus();
@@ -176,6 +200,10 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
   }
 });
 
+// ------------------------------
+// LOAD ROSTER
+// ------------------------------
+
 async function loadRoster() {
   const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
   roster = await res.json();
@@ -184,6 +212,10 @@ async function loadRoster() {
   renderAssignments();
   enableDragDrop();
 }
+
+// ------------------------------
+// RENDER ROSTER + ASSIGNMENTS
+// ------------------------------
 
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
@@ -260,6 +292,10 @@ function makeCard(p) {
   return div;
 }
 
+// ------------------------------
+// AUTO-SAVE ASSIGNMENTS
+// ------------------------------
+
 async function autoSave() {
   const isOfficer = await verifyOfficerStatus();
   if (!isOfficer) return;
@@ -284,6 +320,10 @@ async function autoSave() {
     console.error("Auto-save failed:", err);
   }
 }
+
+// ------------------------------
+// DRAG + DROP
+// ------------------------------
 
 function enableDragDrop() {
   document.querySelectorAll(".draggable").forEach(el => {
@@ -314,8 +354,14 @@ function enableDragDrop() {
   });
 }
 
+// ------------------------------
+// INITIALIZE PAGE
+// ------------------------------
+
 (async () => {
-  await requireOfficer();
+    console.log("Calling requireOfficer()");
+
+  await requireOfficer();   // Officer-only access enforced here
   await loadPBInfo();
   await loadRoster();
 })();

@@ -9,8 +9,6 @@ const pbList = document.getElementById("pbList");
 // OFFICER LOGIN SYSTEM
 // ------------------------------
 
-const OFFICER_PASSWORD = "Nelson1798";
-
 function checkOfficerStatus() {
   const isOfficer = localStorage.getItem("isOfficer") === "true";
 
@@ -19,15 +17,74 @@ function checkOfficerStatus() {
   });
 }
 
-document.getElementById("officerLoginBtn").addEventListener("click", () => {
+document.getElementById("officerLoginBtn").addEventListener("click", async () => {
   const entered = prompt("Enter officer password:");
+  if (!entered) return;
 
-  if (entered === OFFICER_PASSWORD) {
-    localStorage.setItem("isOfficer", "true");
-    alert("Officer access granted.");
-    checkOfficerStatus();
-  } else {
-    alert("Incorrect password.");
+  try {
+    const res = await fetch(`${API_BASE}/officer/check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: entered })
+    });
+
+    const data = await res.json();
+
+    if (data.ok) {
+      localStorage.setItem("isOfficer", "true");
+      localStorage.setItem("officerVersion", data.version);
+      alert("Officer access granted.");
+      checkOfficerStatus();
+    } else {
+      alert("Incorrect password.");
+    }
+  } catch (err) {
+    console.error("Login error:", err);
+    alert("Login failed — network or server error.");
+  }
+});
+
+// ------------------------------
+// CHANGE OFFICER PASSWORD
+// ------------------------------
+
+document.getElementById("changeOfficerPassword").addEventListener("click", async () => {
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
+  if (!isOfficer) {
+    alert("You must be logged in as an officer.");
+    return;
+  }
+
+  const oldPassword = prompt("Enter current officer password:");
+  if (!oldPassword) return;
+
+  const newPassword = prompt("Enter new officer password:");
+  if (!newPassword) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/officer/password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oldPassword, newPassword })
+    });
+
+    const data = await res.json();
+
+    if (data.ok) {
+      alert("Officer password updated successfully.");
+
+      // 🔥 FORCE LOGOUT — restore old behavior
+      localStorage.removeItem("isOfficer");
+      localStorage.removeItem("officerVersion");
+
+      alert("Password changed. Please log in again.");
+      checkOfficerStatus();
+    } else {
+      alert("Password change failed: " + (data.error || "Unknown error"));
+    }
+  } catch (err) {
+    console.error("Password change error:", err);
+    alert("Network or server error while changing password.");
   }
 });
 
@@ -60,12 +117,9 @@ async function loadPBs() {
         <div class="pb-links">
           <a href="/pb/roster.html?id=${pb.id}">Roster</a> |
           <a href="/pb/signup.html?id=${pb.id}">Signup</a> |
-
-          <!-- OFFICER-ONLY: Assign -->
           <a href="/pb/assign.html?id=${pb.id}" class="officerOnly assignBtn">Assign</a>
         </div>
 
-        <!-- OFFICER-ONLY: Delete -->
         <button class="pb-delete officerOnly deleteBtn" data-id="${pb.id}">Delete</button>
       </div>
     `;
@@ -74,7 +128,7 @@ async function loadPBs() {
   html += "</div>";
   pbList.innerHTML = html;
 
-  // IMPORTANT: Re-check officer visibility AFTER cards are created
+  // Re-check officer visibility AFTER cards are created
   checkOfficerStatus();
 }
 

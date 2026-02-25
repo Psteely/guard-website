@@ -1,87 +1,53 @@
-// assets/auth.js — shared officer authentication module
+// auth.js — Centralized officer authentication + version enforcement
 
 const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
-export async function fetchOfficerVersion() {
-  const res = await fetch(`${API_BASE}/officer/version`);
-  if (!res.ok) return null;
-  return res.json();
-}
-
+// ------------------------------
+// CHECK IF OFFICER + VERSION MATCH
+// ------------------------------
+console.log("auth.js loaded");
 export async function verifyOfficerStatus() {
   const isOfficer = localStorage.getItem("isOfficer") === "true";
-  const localVersion = Number(localStorage.getItem("officerVersion") || 0);
+  const storedVersion = localStorage.getItem("officerVersion");
 
-  const server = await fetchOfficerVersion();
-  if (!server) return false;
-
-  if (isOfficer && localVersion !== server.version) {
-    localStorage.removeItem("isOfficer");
-    localStorage.removeItem("officerVersion");
-    alert("Officer password has been changed. Please re-enter the new password.");
+  // Not logged in at all
+  if (!isOfficer || !storedVersion) {
     return false;
   }
 
-  return isOfficer;
+  // Check version mismatch (password changed)
+  try {
+    const res = await fetch(`${API_BASE}/officer/version`);
+    const data = await res.json();
+
+    console.log("Stored:", storedVersion, "Server:", data.version);
+
+    if (Number(storedVersion) !== Number(data.version)) {
+      // Password changed → force logout everywhere
+      localStorage.removeItem("isOfficer");
+      localStorage.removeItem("officerVersion");
+      return false;
+    }
+  } catch (err) {
+    console.error("Version check failed:", err);
+    return false;
+  }
+
+  return true;
 }
+
+// ------------------------------
+// REQUIRE OFFICER (redirect if not)
+// ------------------------------
 
 export async function requireOfficer() {
   const ok = await verifyOfficerStatus();
+
   if (!ok) {
-    alert("Officer access required.");
+    alert("Officer access required. Please log in again.");
     window.location.href = "/pb/index.html";
-  }
-}
-
-export async function getOfficerPassword() {
-  const entered = prompt("Enter officer password:");
-  if (!entered) return null;
-
-  const res = await fetch(`${API_BASE}/officer/check`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: entered })
-  });
-
-  const data = await res.json();
-
-  if (data.ok) {
-    localStorage.setItem("isOfficer", "true");
-    localStorage.setItem("officerVersion", data.version);
-    return entered;
+    return false;
   }
 
-  alert("Incorrect password.");
-  return null;
-}
-
-export async function changeOfficerPassword() {
-  const oldPassword = prompt("Enter CURRENT officer password:");
-  if (!oldPassword) return;
-
-  const newPassword = prompt("Enter NEW officer password:");
-  if (!newPassword) return;
-
-  const confirmPassword = prompt("Confirm NEW officer password:");
-  if (newPassword !== confirmPassword) {
-    alert("Passwords do not match.");
-    return;
-  }
-
-  const res = await fetch(`${API_BASE}/officer/password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ oldPassword, newPassword })
-  });
-
-  const data = await res.json();
-
-  if (data.ok) {
-    alert("Officer password updated. All officers must log in again.");
-    localStorage.removeItem("isOfficer");
-    localStorage.removeItem("officerVersion");
-    window.location.reload();
-  } else {
-    alert("Failed to update password.");
-  }
+  return true;
 }
