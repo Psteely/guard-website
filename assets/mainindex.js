@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadUsage() {
     try {
-      const res = await fetch("/api/usage");
+    const res = await fetch("https://pb-planner.peter-steely.workers.dev/api/usage");
       const data = await res.json();
 
       const percent = ((data.requests / data.limit) * 100).toFixed(1);

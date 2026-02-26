@@ -406,6 +406,30 @@ export default {
         });
       }
 
+           // ===============================
+// Cloudflare Usage Endpoint
+// ===============================
+if (url.pathname === "/api/usage") {
+  const query = `
+    {
+      viewer {
+        accounts(filter: {accountTag: "3325ed80effbf9b08b7e802915c91130"}) {
+          workersInvocationsAdaptive(
+            limit: 1,
+            filter: {
+              scriptName: "pb-planner",
+              datetime_geq: "${new Date().toISOString().slice(0, 10)}T00:00:00Z"
+            }
+          ) {
+            sum {
+              requests
+            }
+          }
+        }
+      }
+    }
+  `;
+
       // ROSTER
       if (parts[3] === "roster" && request.method === "GET") {
         return json(pb.roster || []);
@@ -486,29 +510,7 @@ if (parts[3] === "signup" && request.method === "POST") {
         return json(doData, doRes.ok ? 200 : 400);
       }
 
-      // ===============================
-// Cloudflare Usage Endpoint
-// ===============================
-if (url.pathname === "/api/usage") {
-  const query = `
-    {
-      viewer {
-        accounts(filter: {accountTag: "3325ed80effbf9b08b7e802915c91130"}) {
-          workersInvocationsAdaptive(
-            limit: 1,
-            filter: {
-              scriptName: "pb-planner",
-              datetime_geq: "${new Date().toISOString().slice(0, 10)}T00:00:00Z"
-            }
-          ) {
-            sum {
-              requests
-            }
-          }
-        }
-      }
-    }
-  `;
+ 
 
   const cfRes = await fetch("https://api.cloudflare.com/client/v4/graphql", {
     method: "POST",
