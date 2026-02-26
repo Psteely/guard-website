@@ -411,33 +411,24 @@ export default {
         return json(pb.roster || []);
       }
 
-// SIGNUP
-if (parts[3] === "signup" && request.method === "POST") {
-  const body = await request.json();
+      // SIGNUP
+      if (parts[3] === "signup" && request.method === "POST") {
+        const body = await request.json();
+        pb.roster = pb.roster || [];
 
-  // REQUIRED — without this, pb is undefined and Worker crashes
-  const pb = await loadPB(env, id);
-  pb.roster = pb.roster || [];
+        if (pb.roster.some(p => p.name === body.name)) {
+          return json({ ok: false, error: "Name already signed up" }, 400);
+        }
 
-  if (pb.roster.some(p => p.name === body.name)) {
-    return json({ ok: false, error: "Name already signed up" }, 400);
-  }
+        pb.roster.push({
+          name: body.name,
+          ship: body.ship,
+          br: body.br
+        });
 
-  pb.roster.push({
-    name: body.name,
-    ship: body.ship,
-    br: body.br
-  });
-
-  await savePB(env, id, pb);
-
-  // REQUIRED — triggers UI auto‑update
-  const stub = getStub(env, id);
-  await stub.fetch("https://do/bump");
-
-  return json({ ok: true });
-}
-
+        await savePB(env, id, pb);
+        return json({ ok: true });
+      }
 
       // REMOVE (officer)
       if (parts[3] === "remove" && request.method === "DELETE") {
