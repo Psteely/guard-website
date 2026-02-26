@@ -207,6 +207,30 @@ export default {
       "Access-Control-Allow-Headers": "content-type"
     };
 
+               // ===============================
+// Cloudflare Usage Endpoint
+// ===============================
+if (url.pathname === "/api/usage") {
+  const query = `
+    {
+      viewer {
+        accounts(filter: {accountTag: "3325ed80effbf9b08b7e802915c91130"}) {
+          workersInvocationsAdaptive(
+            limit: 1,
+            filter: {
+              scriptName: "pb-planner",
+              datetime_geq: "${new Date().toISOString().slice(0, 10)}T00:00:00Z"
+            }
+          ) {
+            sum {
+              requests
+            }
+          }
+        }
+      }
+    }
+  `;
+
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: cors });
     }
@@ -406,29 +430,7 @@ export default {
         });
       }
 
-           // ===============================
-// Cloudflare Usage Endpoint
-// ===============================
-if (url.pathname === "/api/usage") {
-  const query = `
-    {
-      viewer {
-        accounts(filter: {accountTag: "3325ed80effbf9b08b7e802915c91130"}) {
-          workersInvocationsAdaptive(
-            limit: 1,
-            filter: {
-              scriptName: "pb-planner",
-              datetime_geq: "${new Date().toISOString().slice(0, 10)}T00:00:00Z"
-            }
-          ) {
-            sum {
-              requests
-            }
-          }
-        }
-      }
-    }
-  `;
+
 
       // ROSTER
       if (parts[3] === "roster" && request.method === "GET") {
