@@ -480,4 +480,15 @@ body {
   margin-left: 6px;
 }
 
+.usage-widget {
+  margin-top: 20px;
+  padding: 10px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 0.85em;
+  line-height: 1.4em;
+}
+
 /* Reuse your existing .card, .columns, etc. */

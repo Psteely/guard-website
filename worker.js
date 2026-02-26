@@ -486,6 +486,54 @@ if (parts[3] === "signup" && request.method === "POST") {
         return json(doData, doRes.ok ? 200 : 400);
       }
 
+      // ===============================
+// Cloudflare Usage Endpoint
+// ===============================
+if (url.pathname === "/api/usage") {
+  const query = `
+    {
+      viewer {
+        accounts(filter: {accountTag: "3325ed80effbf9b08b7e802915c91130"}) {
+          workersInvocationsAdaptive(
+            limit: 1,
+            filter: {
+              scriptName: "pb-planner",
+              datetime_geq: "${new Date().toISOString().slice(0, 10)}T00:00:00Z"
+            }
+          ) {
+            sum {
+              requests
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const cfRes = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${env.CF_API_TOKEN}`
+    },
+    body: JSON.stringify({ query })
+  });
+
+  const data = await cfRes.json();
+
+  const requests =
+    data?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive?.[0]?.sum
+      ?.requests || 0;
+
+  return new Response(
+    JSON.stringify({
+      requests,
+      limit: 100000
+    }),
+    { headers: { "Content-Type": "application/json" } }
+  );
+}
+
       // UPDATE PB METADATA (bump version in DO)
       if (parts[3] === "update" && request.method === "POST") {
         const { name, date, time, br, water } = await request.json();
