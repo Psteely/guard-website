@@ -1,3 +1,201 @@
+export class PBRoom {
+  constructor(state, env) {
+    this.state = state;
+    this.env = env;
+    this.loaded = false;
+    this.assignments = { main: [], screening: [] };
+    this.version = 0;
+  }
+
+  async init() {
+    if (this.loaded) return;
+    const stored = await this.state.storage.get("state");
+    if (stored) {
+      this.assignments = stored.assignments || { main: [], screening: [] };
+      this.version = stored.version || 0;
+    }
+    this.loaded = true;
+  }
+
+  async save() {
+    await this.state.storage.put("state", {
+      assignments: this.assignments,
+      version: this.version
+    });
+  }
+
+  async handleState() {
+    await this.init();
+    return new Response(
+      JSON.stringify({
+        assignments: this.assignments,
+        assignVersion: this.version
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+
+  async handleAssign(request) {
+    await this.init();
+    const { main, screening } = await request.json();
+
+    const set = new Set();
+    for (const n of main || []) set.add(n);
+    for (const n of screening || []) {
+      if (set.has(n)) {
+        return new Response(
+          JSON.stringify({ ok: false, error: "Duplicate captain in both groups" }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" }
+          }
+        );
+      }
+    }
+
+    this.assignments = {
+      main: main || [],
+      screening: screening || []
+    };
+    this.version += 1;
+    await this.save();
+
+    return new Response(
+      JSON.stringify({ ok: true, assignVersion: this.version }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+
+  async handleRemoveCaptain(url) {
+    await this.init();
+    const name = url.searchParams.get("name");
+    if (!name) {
+      return new Response(
+        JSON.stringify({ ok: false, error: "Missing name" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        }
+      );
+    }
+
+    this.assignments.main = (this.assignments.main || []).filter(n => n !== name);
+    this.assignments.screening = (this.assignments.screening || []).filter(n => n !== name);
+    this.version += 1;
+    await this.save();
+
+    return new Response(JSON.stringify({ ok: true, assignVersion: this.version }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
+
+  async handleBump() {
+    await this.init();
+    this.version += 1;
+    await this.save();
+
+    return new Response(
+      JSON.stringify({ ok: true, assignVersion: this.version }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+
+  async handleStream() {
+    await this.init();
+
+    const encoder = new TextEncoder();
+    const headers = {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*"
+    };
+
+    return new Response(
+      new ReadableStream({
+        start: async controller => {
+          let lastVersion = this.version;
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                assignVersion: lastVersion,
+                assignments: this.assignments
+              })}\n\n`
+            )
+          );
+
+          while (true) {
+            await new Promise(r => setTimeout(r, 2000));
+            await this.init();
+
+            if (this.version !== lastVersion) {
+              lastVersion = this.version;
+              controller.enqueue(
+                encoder.encode(
+                  `data: ${JSON.stringify({
+                    assignVersion: this.version,
+                    assignments: this.assignments
+                  })}\n\n`
+                )
+              );
+            }
+          }
+        }
+      }),
+      { headers }
+    );
+  }
+
+  async fetch(request) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "content-type"
+        }
+      });
+    }
+
+    if (path === "/state" && request.method === "GET") {
+      return this.handleState();
+    }
+
+    if (path === "/assign" && request.method === "POST") {
+      return this.handleAssign(request);
+    }
+
+    if (path === "/removeCaptain" && request.method === "POST") {
+      return this.handleRemoveCaptain(url);
+    }
+
+    if (path === "/bump" && request.method === "POST") {
+      return this.handleBump();
+    }
+
+    if (path === "/stream" && request.method === "GET") {
+      return this.handleStream();
+    }
+
+    return new Response("Not found", { status: 404 });
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -54,60 +252,9 @@ export default {
       await env.PB.put(id, JSON.stringify(pb));
     }
 
-    // ------------------------------
-    // SSE STREAM
-    // ------------------------------
-
-    async function streamPBUpdates(id, env) {
-      const pb = await loadPB(env, id);
-      if (!pb) return new Response("PB not found", { status: 404, headers: cors });
-
-      const encoder = new TextEncoder();
-
-      const headers = {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        "Connection": "keep-alive",
-        "Access-Control-Allow-Origin": "*"
-      };
-
-      return new Response(
-        new ReadableStream({
-          async start(controller) {
-            let lastVersion = pb.assignVersion || 0;
-
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({
-                  assignVersion: lastVersion,
-                  assignments: pb.assignments || { main: [], screening: [] }
-                })}\n\n`
-              )
-            );
-
-            while (true) {
-              await new Promise(r => setTimeout(r, 2000));
-
-              const updated = await loadPB(env, id);
-              if (!updated) continue;
-
-              if (updated.assignVersion !== lastVersion) {
-                lastVersion = updated.assignVersion;
-
-                controller.enqueue(
-                  encoder.encode(
-                    `data: ${JSON.stringify({
-                      assignVersion: updated.assignVersion,
-                      assignments: updated.assignments || { main: [], screening: [] }
-                    })}\n\n`
-                  )
-                );
-              }
-            }
-          }
-        }),
-        { headers }
-      );
+    function getRoomStub(env, id) {
+      const roomId = env.PB_ROOM.idFromName(id);
+      return env.PB_ROOM.get(roomId);
     }
 
     // ------------------------------
@@ -143,7 +290,7 @@ export default {
     }
 
     // ------------------------------
-    // PB LIST (NO KV.list())
+    // PB LIST
     // ------------------------------
 
     if (pathname === "/api/pb/list" && request.method === "GET") {
@@ -196,9 +343,7 @@ export default {
         br: body.br,
         water: body.water,
         created: Date.now(),
-        roster: [],
-        assignments: null,
-        assignVersion: 0
+        roster: []
       };
 
       await savePB(env, id, pb);
@@ -218,6 +363,8 @@ export default {
       const pb = await loadPB(env, id);
       if (!pb) return json({ error: "Not found" }, 404);
 
+      const stub = getRoomStub(env, id);
+
       // DELETE PB
       if (parts.length === 3 && request.method === "DELETE") {
         await env.PB.delete(id);
@@ -225,13 +372,27 @@ export default {
         return json({ ok: true });
       }
 
-      // STREAM
-      if (parts[3] === "stream") {
-        return streamPBUpdates(id, env);
+      // STREAM (via DO)
+      if (parts[3] === "stream" && request.method === "GET") {
+        const doRes = await stub.fetch("https://do/stream", {
+          method: "GET",
+          headers: { "Accept": "text/event-stream" }
+        });
+
+        const headers = new Headers(doRes.headers);
+        headers.set("Access-Control-Allow-Origin", "*");
+
+        return new Response(doRes.body, {
+          status: doRes.status,
+          headers
+        });
       }
 
-      // CONFIG
-      if (parts[3] === "config") {
+      // CONFIG (merge PB metadata + DO assignments)
+      if (parts[3] === "config" && request.method === "GET") {
+        const doRes = await stub.fetch("https://do/state");
+        const doData = await doRes.json();
+
         return json({
           id: pb.id,
           name: pb.name,
@@ -240,8 +401,8 @@ export default {
           br: pb.br,
           water: pb.water,
           created: pb.created,
-          assignments: pb.assignments || null,
-          assignVersion: pb.assignVersion || 0
+          assignments: doData.assignments || { main: [], screening: [] },
+          assignVersion: doData.assignVersion || 0
         });
       }
 
@@ -275,6 +436,12 @@ export default {
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
 
         await savePB(env, id, pb);
+
+        // Also remove from assignments in DO
+        await stub.fetch(`https://do/removeCaptain?name=${encodeURIComponent(name)}`, {
+          method: "POST"
+        });
+
         return json({ ok: true });
       }
 
@@ -283,42 +450,34 @@ export default {
         const name = decodeURIComponent(parts[4]);
 
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
-
-        if (pb.assignments) {
-          pb.assignments.main = (pb.assignments.main || []).filter(n => n !== name);
-          pb.assignments.screening = (pb.assignments.screening || []).filter(n => n !== name);
-        }
-
-        pb.assignVersion = (pb.assignVersion || 0) + 1;
-
         await savePB(env, id, pb);
+
+        // Also remove from assignments in DO
+        await stub.fetch(`https://do/removeCaptain?name=${encodeURIComponent(name)}`, {
+          method: "POST"
+        });
+
         return json({ ok: true });
       }
 
-      // ASSIGN
+      // ASSIGN (via DO)
       if (parts[3] === "assign" && request.method === "POST") {
-        const { main, screening } = await request.json();
+        const body = await request.json();
 
-        const set = new Set();
-        for (const n of main || []) set.add(n);
-        for (const n of screening || []) {
-          if (set.has(n)) {
-            return json({ ok: false, error: "Duplicate captain in both groups" }, 400);
-          }
-        }
+        const doRes = await stub.fetch("https://do/assign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            main: body.main || [],
+            screening: body.screening || []
+          })
+        });
 
-        pb.assignments = {
-          main: main || [],
-          screening: screening || []
-        };
-
-        pb.assignVersion = (pb.assignVersion || 0) + 1;
-
-        await savePB(env, id, pb);
-        return json({ ok: true, assignVersion: pb.assignVersion });
+        const doData = await doRes.json();
+        return json(doData, doRes.ok ? 200 : 400);
       }
 
-      // UPDATE PB METADATA
+      // UPDATE PB METADATA (bump version in DO)
       if (parts[3] === "update" && request.method === "POST") {
         const { name, date, time, br, water } = await request.json();
 
@@ -328,10 +487,12 @@ export default {
         pb.br = br;
         pb.water = water;
 
-        pb.assignVersion = (pb.assignVersion || 0) + 1;
-
         await savePB(env, id, pb);
-        return json({ ok: true, assignVersion: pb.assignVersion });
+
+        const bumpRes = await stub.fetch("https://do/bump", { method: "POST" });
+        const bumpData = await bumpRes.json();
+
+        return json({ ok: true, assignVersion: bumpData.assignVersion });
       }
 
       return json({ error: "Not found" }, 404);
