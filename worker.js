@@ -425,7 +425,9 @@ if (parts[3] === "signup" && request.method === "POST") {
   pb.roster.push({
     name: body.name,
     ship: body.ship,
-    br: body.br
+    br: body.br,
+    createdBy: body.createdBy
+
   });
 
   await savePB(env, id, pb);

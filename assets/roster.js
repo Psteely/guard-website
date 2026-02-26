@@ -113,36 +113,33 @@ function renderRoster() {
     const tick = isAssigned(p.name) ? " ✔️" : "";
     div.textContent = `${p.name} — ${p.ship} (${p.br} BR)${tick}`;
 
-    // Add withdraw button only for the logged-in captain
-    if (p.name === myName) {
-      const btn = document.createElement("button");
-      btn.textContent = "Withdraw";
-      btn.className = "withdrawBtn";
-      btn.style.marginLeft = "10px";
+// Add withdraw button for any captain created by this user
+if (p.createdBy === localStorage.userId) {
+  const btn = document.createElement("button");
+  btn.textContent = "Withdraw";
+  btn.className = "withdrawBtn";
+  btn.style.marginLeft = "10px";
 
-      btn.onclick = async () => {
-        if (!confirm("Are you sure you want to withdraw from this PB?")) return;
+  btn.onclick = async () => {
+    if (!confirm(`Withdraw ${p.name}?`)) return;
 
-        const res = await fetch(
-          `${API_BASE}/pb/${pbId}/withdraw/${encodeURIComponent(myName)}`,
-          { method: "DELETE" }
-        );
+    const res = await fetch(
+      `${API_BASE}/pb/${pbId}/withdraw/${encodeURIComponent(p.name)}`,
+      { method: "DELETE" }
+    );
 
-        const data = await res.json();
-        if (!data.ok) {
-          alert("Failed to withdraw.");
-          return;
-        }
-
-        // Clear identity so they can't withdraw again
-        localStorage.removeItem("captainName");
-
-        // Update immediately; SSE will update others
-        await loadRoster();
-      };
-
-      div.appendChild(btn);
+    const data = await res.json();
+    if (!data.ok) {
+      alert("Failed to withdraw.");
+      return;
     }
+
+    // Do NOT clear captainName — user may have signed up multiple captains
+    await loadRoster();
+  };
+
+  div.appendChild(btn);
+}
 
     rosterDiv.appendChild(div);
   });

@@ -9,6 +9,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  if (!localStorage.userId) {
+  localStorage.userId = crypto.randomUUID();
+}
+
   // Match EXACT IDs from your HTML
   const nameInput = document.getElementById("nameInput");
   const shipSelect = document.getElementById("shipSelect");
@@ -114,7 +118,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    const body = { name, ship, br };
+    //const body = { name, ship, br };
+    const body = {
+  name,
+  ship,
+  br,
+  createdBy: localStorage.userId
+};
 
     try {
       const res = await fetch(`${API_BASE}/pb/${pbId}/signup`, {
