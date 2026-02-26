@@ -415,7 +415,6 @@ export default {
 if (parts[3] === "signup" && request.method === "POST") {
   const body = await request.json();
 
-  // REQUIRED — without this, pb is undefined and Worker crashes
   const pb = await loadPB(env, id);
   pb.roster = pb.roster || [];
 
@@ -431,9 +430,8 @@ if (parts[3] === "signup" && request.method === "POST") {
 
   await savePB(env, id, pb);
 
-  // REQUIRED — triggers UI auto‑update
-  const stub = getStub(env, id);
-  await stub.fetch("https://do/bump");
+  const stub = getRoomStub(env, id);
+  await stub.fetch("https://do/bump", { method: "POST" });
 
   return json({ ok: true });
 }
