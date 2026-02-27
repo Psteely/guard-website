@@ -1,4 +1,5 @@
-//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+import { API_BASE } from "./config.js";
+import { cacheGet, cacheSet, cacheRemove, cachePBKey } from "./cache.js";
 
 document.addEventListener("DOMContentLoaded", () => {
   const url = new URL(window.location.href);
@@ -10,8 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (!localStorage.userId) {
-  localStorage.userId = crypto.randomUUID();
-}
+    localStorage.userId = crypto.randomUUID();
+  }
 
   // Match EXACT IDs from your HTML
   const nameInput = document.getElementById("nameInput");
@@ -33,9 +34,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ------------------------------
-  // LOAD PB METADATA
+  // LOAD PB METADATA (CACHED)
   // ------------------------------
   async function loadPBMeta() {
+    const key = cachePBKey(pbId, "config");
+    const cached = cacheGet(key);
+
+    if (cached) {
+      applyPBMeta(cached);
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
       if (!res.ok) {
@@ -44,65 +53,80 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const pb = await res.json();
-
-      if (pbTitle) pbTitle.textContent = pb.name;
-      if (pbDate) pbDate.textContent = pb.date;
-      if (pbTime) pbTime.textContent = pb.time;
-      if (pbBR) pbBR.textContent = pb.br;
-      if (pbWater) pbWater.textContent = pb.water;
-
-      // Back link
-      if (backLink) {
-        backLink.href = `/pb/roster.html?id=${pbId}`;
-      }
+      cacheSet(key, pb);
+      applyPBMeta(pb);
 
     } catch (err) {
       console.error("Error loading PB metadata:", err);
     }
   }
 
+  function applyPBMeta(pb) {
+    if (pbTitle) pbTitle.textContent = pb.name;
+    if (pbDate) pbDate.textContent = pb.date;
+    if (pbTime) pbTime.textContent = pb.time;
+    if (pbBR) pbBR.textContent = pb.br;
+    if (pbWater) pbWater.textContent = pb.water;
+
+    if (backLink) {
+      backLink.href = `/pb/roster.html?id=${pbId}`;
+    }
+  }
+
   // ------------------------------
-  // LOAD SHIPS FROM /assets/ships.json
+  // LOAD SHIPS (CACHED)
   // ------------------------------
   async function loadShips() {
-    try {
-      const res = await fetch("/assets/ships.json");
-      if (!res.ok) {
-        console.error("Failed to load /assets/ships.json");
+    const key = "ships_json";
+
+    // Cache ships for 24 hours
+    const cached = cacheGet(key, 86400000);
+    let ships;
+
+    if (cached) {
+      ships = cached;
+    } else {
+      try {
+        const res = await fetch("/assets/ships.json");
+        if (!res.ok) {
+          console.error("Failed to load /assets/ships.json");
+          return;
+        }
+
+        ships = await res.json();
+        cacheSet(key, ships);
+
+      } catch (err) {
+        console.error("Error loading ships:", err);
         return;
       }
-
-      const ships = await res.json();
-
-      // Clear dropdown
-      shipSelect.innerHTML = "";
-
-      // Placeholder
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Select your ship";
-      placeholder.disabled = true;
-      placeholder.selected = true;
-      shipSelect.appendChild(placeholder);
-
-      // Populate
-      ships.forEach(ship => {
-        const opt = document.createElement("option");
-        opt.value = ship.name;
-        opt.textContent = `${ship.name} (${ship.br} BR)`;
-        opt.dataset.br = ship.br;
-        shipSelect.appendChild(opt);
-      });
-
-      // Auto-fill BR
-      shipSelect.addEventListener("change", () => {
-        const selected = shipSelect.options[shipSelect.selectedIndex];
-        brInput.value = selected?.dataset?.br || "";
-      });
-
-    } catch (err) {
-      console.error("Error loading ships:", err);
     }
+
+    // Clear dropdown
+    shipSelect.innerHTML = "";
+
+    // Placeholder
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select your ship";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    shipSelect.appendChild(placeholder);
+
+    // Populate
+    ships.forEach(ship => {
+      const opt = document.createElement("option");
+      opt.value = ship.name;
+      opt.textContent = `${ship.name} (${ship.br} BR)`;
+      opt.dataset.br = ship.br;
+      shipSelect.appendChild(opt);
+    });
+
+    // Auto-fill BR
+    shipSelect.addEventListener("change", () => {
+      const selected = shipSelect.options[shipSelect.selectedIndex];
+      brInput.value = selected?.dataset?.br || "";
+    });
   }
 
   // ------------------------------
@@ -118,13 +142,12 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    //const body = { name, ship, br };
     const body = {
-  name,
-  ship,
-  br,
-  createdBy: localStorage.userId
-};
+      name,
+      ship,
+      br,
+      createdBy: localStorage.userId
+    };
 
     try {
       const res = await fetch(`${API_BASE}/pb/${pbId}/signup`, {
@@ -142,6 +165,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Store captain identity
       localStorage.setItem("captainName", name);
+
+      // Invalidate roster cache so roster page reloads fresh
+      cacheRemove(cachePBKey(pbId, "roster"));
 
       // Redirect
       window.location.href = `/pb/roster.html?id=${pbId}`;

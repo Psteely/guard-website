@@ -1,6 +1,5 @@
-import { verifyOfficerStatus } from "./auth.js";
-
-//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+import { API_BASE } from "./config.js";
+import { cacheGet, cacheSet, cacheRemove, cachePBKey } from "./cache.js";
 
 const url = new URL(window.location.href);
 const pbId = url.searchParams.get("id");
@@ -16,7 +15,7 @@ let assignVersion = 0;
 let brLimit = 0;
 
 // ------------------------------
-// SAFE UI UPDATE HELPER
+// SAFE UI UPDATE
 // ------------------------------
 function safeSet(id, value) {
   const el = document.getElementById(id);
@@ -56,12 +55,25 @@ function startCountdown(pbDate, pbTime) {
 }
 
 // ------------------------------
-// LOAD PB CONFIG
+// LOAD PB CONFIG (CACHED)
 // ------------------------------
 async function loadPBConfig() {
+  const key = cachePBKey(pbId, "config");
+  const cached = cacheGet(key);
+
+  if (cached) {
+    applyPBConfig(cached);
+    return;
+  }
+
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
   const pb = await res.json();
 
+  cacheSet(key, pb);
+  applyPBConfig(pb);
+}
+
+function applyPBConfig(pb) {
   safeSet("pbTitle", pb.name);
   safeSet("pbDateText", pb.date);
   safeSet("pbTimeText", pb.time);
@@ -78,33 +90,39 @@ async function loadPBConfig() {
 }
 
 // ------------------------------
-// LOAD ROSTER
+// LOAD ROSTER (CACHED)
 // ------------------------------
 async function loadRoster() {
+  const key = cachePBKey(pbId, "roster");
+  const cached = cacheGet(key);
+
+  if (cached) {
+    roster = cached;
+    renderRoster();
+    renderAssignments();
+    return;
+  }
+
   const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
   roster = await res.json();
 
+  cacheSet(key, roster);
   renderRoster();
   renderAssignments();
 }
 
 // ------------------------------
-// ASSIGNMENT CHECK
+// RENDER ROSTER
 // ------------------------------
 function isAssigned(name) {
   return assignments.main.includes(name) || assignments.screening.includes(name);
 }
 
-// ------------------------------
-// RENDER ROSTER (WITH WITHDRAW BUTTON)
-// ------------------------------
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
   if (!rosterDiv) return;
 
   rosterDiv.innerHTML = "";
-
-  const myName = localStorage.getItem("captainName");
 
   roster.forEach(p => {
     const div = document.createElement("div");
@@ -113,40 +131,39 @@ function renderRoster() {
     const tick = isAssigned(p.name) ? " ✔️" : "";
     div.textContent = `${p.name} — ${p.ship} (${p.br} BR)${tick}`;
 
-// Add withdraw button for any captain created by this user
-if (p.createdBy === localStorage.userId) {
-  const btn = document.createElement("button");
-  btn.textContent = "Withdraw";
-  btn.className = "withdrawBtn";
-  btn.style.marginLeft = "10px";
+    if (p.createdBy === localStorage.userId) {
+      const btn = document.createElement("button");
+      btn.textContent = "Withdraw";
+      btn.className = "withdrawBtn";
+      btn.style.marginLeft = "10px";
 
-  btn.onclick = async () => {
-    if (!confirm(`Withdraw ${p.name}?`)) return;
+      btn.onclick = async () => {
+        if (!confirm(`Withdraw ${p.name}?`)) return;
 
-    const res = await fetch(
-      `${API_BASE}/pb/${pbId}/withdraw/${encodeURIComponent(p.name)}`,
-      { method: "DELETE" }
-    );
+        const res = await fetch(
+          `${API_BASE}/pb/${pbId}/withdraw/${encodeURIComponent(p.name)}`,
+          { method: "DELETE" }
+        );
 
-    const data = await res.json();
-    if (!data.ok) {
-      alert("Failed to withdraw.");
-      return;
+        const data = await res.json();
+        if (!data.ok) {
+          alert("Failed to withdraw.");
+          return;
+        }
+
+        cacheRemove(cachePBKey(pbId, "roster"));
+        await loadRoster();
+      };
+
+      div.appendChild(btn);
     }
-
-    // Do NOT clear captainName — user may have signed up multiple captains
-    await loadRoster();
-  };
-
-  div.appendChild(btn);
-}
 
     rosterDiv.appendChild(div);
   });
 }
 
 // ------------------------------
-// RENDER ASSIGNMENTS + BR TOTALS
+// RENDER ASSIGNMENTS
 // ------------------------------
 function renderAssignments() {
   const mainDiv = document.getElementById("mainAssignments");
@@ -188,9 +205,6 @@ function renderAssignments() {
   updateBRStatus(mainBR);
 }
 
-// ------------------------------
-// BR COLOUR CODING
-// ------------------------------
 function updateBRStatus(mainBR) {
   const statusDiv = document.getElementById("mainBRStatus");
   const warningSpan = document.getElementById("mainBRWarning");
@@ -214,7 +228,7 @@ function updateBRStatus(mainBR) {
 }
 
 // ------------------------------
-// SSE STREAMING (PRIMARY METHOD)
+// SSE STREAMING
 // ------------------------------
 function startSSE() {
   const streamUrl = `${API_BASE}/pb/${pbId}/stream`;
@@ -228,6 +242,8 @@ function startSSE() {
     if (data.assignVersion !== assignVersion) {
       assignVersion = data.assignVersion;
       assignments = data.assignments;
+
+      cacheRemove(cachePBKey(pbId, "roster"));
       await loadRoster();
     }
   };
@@ -240,7 +256,7 @@ function startSSE() {
 }
 
 // ------------------------------
-// POLLING FALLBACK (30s)
+// POLLING FALLBACK
 // ------------------------------
 function startPollingFallback() {
   setInterval(async () => {
@@ -254,6 +270,8 @@ function startPollingFallback() {
       if (newVersion !== assignVersion) {
         assignVersion = newVersion;
         assignments = pb.assignments || { main: [], screening: [] };
+
+        cacheRemove(cachePBKey(pbId, "roster"));
         await loadRoster();
       }
     } catch (err) {
@@ -269,7 +287,8 @@ function startPollingFallback() {
   await loadPBConfig();
   await loadRoster();
 
-  const isOfficer = await verifyOfficerStatus();
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
+
   if (isOfficer) {
     const link = document.getElementById("assignLink");
     if (link) {
@@ -278,6 +297,5 @@ function startPollingFallback() {
     }
   }
 
-  // Start SSE (fallback handled automatically)
   startSSE();
 })();

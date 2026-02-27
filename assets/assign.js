@@ -5,9 +5,8 @@ import {
   requireOfficer
 } from "./auth.js";
 
-
-
-//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+import { API_BASE } from "./config.js";
+import { cacheGet, cacheSet, cacheRemove, cachePBKey } from "./cache.js";
 
 const url = new URL(window.location.href);
 const pbId = url.searchParams.get("id");
@@ -96,19 +95,32 @@ function scheduleSave() {
   clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
     autoSave();
-  }, 500);
+  }, 2000);
 }
 
 // ------------------------------
-// LOAD PB INFO
+// LOAD PB INFO (CACHED)
 // ------------------------------
 
 async function loadPBInfo() {
+  const key = cachePBKey(pbId, "config");
+  const cached = cacheGet(key);
+
+  if (cached) {
+    applyPBInfo(cached);
+    return;
+  }
+
   const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
   if (!res.ok) return;
 
   const pb = await res.json();
+  cacheSet(key, pb);
 
+  applyPBInfo(pb);
+}
+
+function applyPBInfo(pb) {
   document.getElementById("pbTitle").textContent = pb.name;
   document.getElementById("pbNameText").textContent = pb.name;
   document.getElementById("pbDateText").textContent = pb.date;
@@ -123,7 +135,6 @@ async function loadPBInfo() {
   assignVersion = pb.assignVersion || 0;
 
   startCountdown(pb.date, pb.time);
-
   enablePBMetaEditing(pb);
 }
 
@@ -191,6 +202,9 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
     if (typeof data.assignVersion === "number") {
       assignVersion = data.assignVersion;
     }
+
+    cacheRemove(cachePBKey(pbId, "config"));
+
     showSaved();
     await loadPBInfo();
     startCountdown(date, time);
@@ -201,12 +215,25 @@ document.getElementById("savePBMeta")?.addEventListener("click", async () => {
 });
 
 // ------------------------------
-// LOAD ROSTER
+// LOAD ROSTER (CACHED)
 // ------------------------------
 
 async function loadRoster() {
+  const key = cachePBKey(pbId, "roster");
+  const cached = cacheGet(key);
+
+  if (cached) {
+    roster = cached;
+    renderRoster();
+    renderAssignments();
+    enableDragDrop();
+    return;
+  }
+
   const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
   roster = await res.json();
+
+  cacheSet(key, roster);
 
   renderRoster();
   renderAssignments();
@@ -359,9 +386,7 @@ function enableDragDrop() {
 // ------------------------------
 
 (async () => {
-    console.log("Calling requireOfficer()");
-
-  await requireOfficer();   // Officer-only access enforced here
+  await requireOfficer();
   await loadPBInfo();
   await loadRoster();
 })();

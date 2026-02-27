@@ -2,18 +2,18 @@
 console.log("index.js loaded");
 
 import {
-  verifyOfficerStatus,
   getOfficerPassword,
   changeOfficerPassword
 } from "./auth.js";
 
-//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+import { API_BASE } from "./config.js";
+import { cacheGet, cacheSet, cacheRemove } from "./cache.js";
 
 // ------------------------------
 // OFFICER UI
 // ------------------------------
-async function updateOfficerUI() {
-  const isOfficer = await verifyOfficerStatus();
+function updateOfficerUI() {
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
   document.querySelectorAll(".officerOnly").forEach(el => {
     el.style.display = isOfficer ? "inline-block" : "none";
   });
@@ -31,20 +31,29 @@ if (loginBtn) {
   });
 }
 
-// Change password button (if present)
+// Change password button
 const changePwdBtn = document.getElementById("changeOfficerPassword");
 if (changePwdBtn) {
   changePwdBtn.addEventListener("click", changeOfficerPassword);
 }
 
 // ------------------------------
-// LOAD PB LIST
+// LOAD PB LIST (CACHED)
 // ------------------------------
 async function loadPBs() {
   const listDiv = document.getElementById("pbList");
   if (!listDiv) return;
 
   listDiv.innerHTML = "Loading...";
+
+  const key = "pb_list_cache";
+
+  // Try cache first (TTL 15 seconds)
+  const cached = cacheGet(key, 15000);
+  if (cached) {
+    renderPBList(cached);
+    return;
+  }
 
   try {
     const res = await fetch(`${API_BASE}/pb/list`);
@@ -55,39 +64,47 @@ async function loadPBs() {
 
     const pbs = await res.json();
 
-    if (pbs.length === 0) {
-      listDiv.innerHTML = "<p>No active Port Battles.</p>";
-      return;
-    }
-
-    let html = "";
-    pbs.forEach(pb => {
-      html += `
-        <div class="pb-card">
-          <h3>${pb.name}</h3>
-          <div>Date: ${pb.date}</div>
-          <div>Time: ${pb.time}</div>
-          <div>BR: ${pb.br}</div>
-          <div>Water: ${pb.water}</div>
-
-          <div class="pb-links">
-            <a href="/pb/roster.html?id=${pb.id}">Roster</a> |
-            <a href="/pb/signup.html?id=${pb.id}">Signup</a> |
-            <a href="/pb/assign.html?id=${pb.id}" class="officerOnly">Assign</a>
-          </div>
-
-          <button class="pb-delete officerOnly" data-id="${pb.id}">Delete</button>
-        </div>
-      `;
-    });
-
-    listDiv.innerHTML = html;
-    updateOfficerUI(); // ensure officer-only buttons show/hide correctly
+    cacheSet(key, pbs);
+    renderPBList(pbs);
 
   } catch (err) {
     console.error(err);
     listDiv.innerHTML = "<p>Error loading Port Battles.</p>";
   }
+}
+
+function renderPBList(pbs) {
+  const listDiv = document.getElementById("pbList");
+  if (!listDiv) return;
+
+  if (pbs.length === 0) {
+    listDiv.innerHTML = "<p>No active Port Battles.</p>";
+    return;
+  }
+
+  let html = "";
+  pbs.forEach(pb => {
+    html += `
+      <div class="pb-card">
+        <h3>${pb.name}</h3>
+        <div>Date: ${pb.date}</div>
+        <div>Time: ${pb.time}</div>
+        <div>BR: ${pb.br}</div>
+        <div>Water: ${pb.water}</div>
+
+        <div class="pb-links">
+          <a href="/pb/roster.html?id=${pb.id}">Roster</a> |
+          <a href="/pb/signup.html?id=${pb.id}">Signup</a> |
+          <a href="/pb/assign.html?id=${pb.id}" class="officerOnly">Assign</a>
+        </div>
+
+        <button class="pb-delete officerOnly" data-id="${pb.id}">Delete</button>
+      </div>
+    `;
+  });
+
+  listDiv.innerHTML = html;
+  updateOfficerUI();
 }
 
 // ------------------------------
@@ -132,6 +149,9 @@ if (confirmBtn) {
     const data = await res.json();
 
     if (data.ok) {
+      // Invalidate PB list cache
+      cacheRemove("pb_list_cache");
+
       window.location.href = `/pb/roster.html?id=${data.id}`;
     } else {
       alert("Failed to create Port Battle.");
@@ -157,6 +177,9 @@ document.addEventListener("click", async (e) => {
   const data = await res.json();
 
   if (data.ok) {
+    // Invalidate PB list cache
+    cacheRemove("pb_list_cache");
+
     loadPBs();
   } else {
     alert("Failed to delete Port Battle.");
@@ -167,6 +190,6 @@ document.addEventListener("click", async (e) => {
 // INITIAL LOAD
 // ------------------------------
 (async () => {
-  await updateOfficerUI();
+  updateOfficerUI();
   await loadPBs();
 })();
