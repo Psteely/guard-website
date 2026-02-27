@@ -9,26 +9,19 @@ if (!pbId) {
   throw new Error("Missing PB ID");
 }
 
+let pb = null;
 let roster = [];
 let assignments = { main: [], screening: [] };
 let assignVersion = 0;
 let brLimit = 0;
 
-// ------------------------------
-// SAFE UI UPDATE
-// ------------------------------
-function safeSet(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value;
-}
-
-// ------------------------------
-// COUNTDOWN TIMER
-// ------------------------------
 let countdownInterval = null;
 
-function startCountdown(pbDate, pbTime) {
-  const target = new Date(`${pbDate}T${pbTime}:00Z`).getTime();
+// ------------------------------
+// COUNTDOWN
+// ------------------------------
+function startCountdown(date, time) {
+  const target = new Date(`${date}T${time}:00Z`).getTime();
 
   if (countdownInterval) clearInterval(countdownInterval);
 
@@ -39,80 +32,76 @@ function startCountdown(pbDate, pbTime) {
     const el = document.getElementById("countdownTimer");
     if (!el) return;
 
-    if (diff <= 0) {
+    if (diff <= 0 || isNaN(diff)) {
       el.textContent = "Battle is starting!";
       clearInterval(countdownInterval);
       return;
     }
 
-    const days = Math.floor(diff / 86400000);
-    const hours = Math.floor((diff / 3600000) % 24);
-    const mins = Math.floor((diff / 60000) % 60);
-    const secs = Math.floor((diff / 1000) % 60);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff / 3600000) % 24);
+    const m = Math.floor((diff / 60000) % 60);
+    const s = Math.floor((diff / 1000) % 60);
 
-    el.textContent = `${days}d ${hours}h ${mins}m ${secs}s`;
+    el.textContent = `${d}d ${h}h ${m}m ${s}s`;
   }, 1000);
 }
 
 // ------------------------------
-// LOAD PB CONFIG (CACHED)
+// LOAD FULL SNAPSHOT (CACHED)
 // ------------------------------
-async function loadPBConfig() {
-  const key = cachePBKey(pbId, "config");
-  const cached = cacheGet(key);
+async function loadFull() {
+  const key = cachePBKey(pbId, "full");
+  const cached = cacheGet(key, 30000);
 
   if (cached) {
-    applyPBConfig(cached);
+    applyFull(cached);
     return;
   }
 
-  const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
-  const pb = await res.json();
+  const res = await fetch(`${API_BASE}/pb/${pbId}/full`);
+  if (!res.ok) {
+    console.error("Failed to load PB:", res.status);
+    return;
+  }
 
-  cacheSet(key, pb);
-  applyPBConfig(pb);
+  const data = await res.json();
+  cacheSet(key, data);
+  applyFull(data);
 }
 
-function applyPBConfig(pb) {
-  safeSet("pbTitle", pb.name);
-  safeSet("pbDateText", pb.date);
-  safeSet("pbTimeText", pb.time);
-  safeSet("pbBRText", pb.br);
-  safeSet("pbWaterText", pb.water);
+function applyFull(data) {
+  pb = data;
+  roster = data.roster || [];
+  assignments = data.assignments || { main: [], screening: [] };
+  assignVersion = data.assignVersion || 0;
 
   brLimit = Number(pb.br) || 0;
-  safeSet("mainBRLimit", brLimit);
 
-  assignments = pb.assignments || { main: [], screening: [] };
-  assignVersion = pb.assignVersion || 0;
+  document.getElementById("pbTitle").textContent = pb.name;
+  document.getElementById("pbDateText").textContent = pb.date;
+  document.getElementById("pbTimeText").textContent = pb.time;
+  document.getElementById("pbBRText").textContent = pb.br;
+  document.getElementById("pbWaterText").textContent = pb.water;
+  document.getElementById("mainBRLimit").textContent = brLimit;
 
   startCountdown(pb.date, pb.time);
-}
 
-// ------------------------------
-// LOAD ROSTER (CACHED)
-// ------------------------------
-async function loadRoster() {
-  const key = cachePBKey(pbId, "roster");
-  const cached = cacheGet(key);
-
-  if (cached) {
-    roster = cached;
-    renderRoster();
-    renderAssignments();
-    return;
-  }
-
-  const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
-  roster = await res.json();
-
-  cacheSet(key, roster);
   renderRoster();
   renderAssignments();
+
+  const isOfficer = localStorage.getItem("isOfficer") === "true";
+  if (isOfficer) {
+    const link = document.getElementById("assignLink");
+    if (link) {
+      link.style.display = "inline-block";
+      link.href = `/pb/assign.html?id=${pbId}`;
+    }
+  }
 }
 
 // ------------------------------
-// RENDER ROSTER
+// RENDER
 // ------------------------------
 function isAssigned(name) {
   return assignments.main.includes(name) || assignments.screening.includes(name);
@@ -120,8 +109,6 @@ function isAssigned(name) {
 
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
-  if (!rosterDiv) return;
-
   rosterDiv.innerHTML = "";
 
   roster.forEach(p => {
@@ -151,8 +138,8 @@ function renderRoster() {
           return;
         }
 
-        cacheRemove(cachePBKey(pbId, "roster"));
-        await loadRoster();
+        cacheRemove(cachePBKey(pbId, "full"));
+        await loadFull();
       };
 
       div.appendChild(btn);
@@ -162,14 +149,9 @@ function renderRoster() {
   });
 }
 
-// ------------------------------
-// RENDER ASSIGNMENTS
-// ------------------------------
 function renderAssignments() {
   const mainDiv = document.getElementById("mainAssignments");
   const screeningDiv = document.getElementById("screeningAssignments");
-
-  if (!mainDiv || !screeningDiv) return;
 
   mainDiv.innerHTML = "";
   screeningDiv.innerHTML = "";
@@ -199,8 +181,8 @@ function renderAssignments() {
     }
   });
 
-  safeSet("mainBR", mainBR);
-  safeSet("screeningBR", screeningBR);
+  document.getElementById("mainBR").textContent = mainBR;
+  document.getElementById("screeningBR").textContent = screeningBR;
 
   updateBRStatus(mainBR);
 }
@@ -208,8 +190,6 @@ function renderAssignments() {
 function updateBRStatus(mainBR) {
   const statusDiv = document.getElementById("mainBRStatus");
   const warningSpan = document.getElementById("mainBRWarning");
-
-  if (!statusDiv || !warningSpan) return;
 
   const ratio = brLimit ? mainBR / brLimit : 0;
 
@@ -234,8 +214,6 @@ function startSSE() {
   const streamUrl = `${API_BASE}/pb/${pbId}/stream`;
   const evtSource = new EventSource(streamUrl);
 
-  console.log("SSE: Connecting to stream…");
-
   evtSource.onmessage = async (event) => {
     const data = JSON.parse(event.data);
 
@@ -243,13 +221,12 @@ function startSSE() {
       assignVersion = data.assignVersion;
       assignments = data.assignments;
 
-      cacheRemove(cachePBKey(pbId, "roster"));
-      await loadRoster();
+      cacheRemove(cachePBKey(pbId, "full"));
+      await loadFull();
     }
   };
 
   evtSource.onerror = () => {
-    console.warn("SSE failed — falling back to polling");
     evtSource.close();
     startPollingFallback();
   };
@@ -261,18 +238,12 @@ function startSSE() {
 function startPollingFallback() {
   setInterval(async () => {
     try {
-      const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
-      if (!res.ok) return;
+      const res = await fetch(`${API_BASE}/pb/${pbId}/full`);
+      const data = await res.json();
 
-      const pb = await res.json();
-      const newVersion = pb.assignVersion || 0;
-
-      if (newVersion !== assignVersion) {
-        assignVersion = newVersion;
-        assignments = pb.assignments || { main: [], screening: [] };
-
-        cacheRemove(cachePBKey(pbId, "roster"));
-        await loadRoster();
+      if (data.assignVersion !== assignVersion) {
+        cacheRemove(cachePBKey(pbId, "full"));
+        await loadFull();
       }
     } catch (err) {
       console.error("Polling failed:", err);
@@ -281,21 +252,9 @@ function startPollingFallback() {
 }
 
 // ------------------------------
-// INITIAL LOAD
+// INIT
 // ------------------------------
 (async () => {
-  await loadPBConfig();
-  await loadRoster();
-
-  const isOfficer = localStorage.getItem("isOfficer") === "true";
-
-  if (isOfficer) {
-    const link = document.getElementById("assignLink");
-    if (link) {
-      link.style.display = "inline-block";
-      link.href = `/pb/assign.html?id=${pbId}`;
-    }
-  }
-
+  await loadFull();
   startSSE();
 })();

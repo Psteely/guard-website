@@ -374,6 +374,23 @@ var worker_default = {
       const pb = await loadPB(env, id);
       if (!pb) return json({ error: "Not found" }, 404);
       const stub = getRoomStub(env, id);
+      if (parts[3] === "full" && request.method === "GET") {
+        const doRes = await stub.fetch("https://do/state");
+        const doData = await doRes.json();
+        return json({
+          ok: true,
+          id: pb.id,
+          name: pb.name,
+          date: pb.date,
+          time: pb.time,
+          br: pb.br,
+          water: pb.water,
+          created: pb.created,
+          roster: pb.roster || [],
+          assignments: doData.assignments || { main: [], screening: [] },
+          assignVersion: doData.assignVersion || 0
+        });
+      }
       if (parts.length === 3 && request.method === "DELETE") {
         await env.PB.delete(id);
         await removeFromIndex(env, id);

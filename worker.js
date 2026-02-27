@@ -259,10 +259,10 @@ export default {
       });
 
       const data = await cfRes.json();
-      
 
-          const requests =
-  data?.data?.viewer?.accounts?.[0]?.workersInvocations?.[0]?.sum?.requests || 0;
+      const requests =
+        data?.data?.viewer?.accounts?.[0]?.workersInvocations?.[0]?.sum
+          ?.requests || 0;
 
       return json({ requests, limit: 100000 });
     }
@@ -413,6 +413,28 @@ export default {
 
       const stub = getRoomStub(env, id);
 
+      // ------------------------------
+      // NEW: FULL SNAPSHOT ENDPOINT
+      // ------------------------------
+      if (parts[3] === "full" && request.method === "GET") {
+        const doRes = await stub.fetch("https://do/state");
+        const doData = await doRes.json();
+
+        return json({
+          ok: true,
+          id: pb.id,
+          name: pb.name,
+          date: pb.date,
+          time: pb.time,
+          br: pb.br,
+          water: pb.water,
+          created: pb.created,
+          roster: pb.roster || [],
+          assignments: doData.assignments || { main: [], screening: [] },
+          assignVersion: doData.assignVersion || 0
+        });
+      }
+
       // DELETE PB
       if (parts.length === 3 && request.method === "DELETE") {
         await env.PB.delete(id);
@@ -436,7 +458,7 @@ export default {
         });
       }
 
-      // CONFIG (PB metadata + DO assignments)
+      // CONFIG
       if (parts[3] === "config" && request.method === "GET") {
         const doRes = await stub.fetch("https://do/state");
         const doData = await doRes.json();
@@ -533,7 +555,7 @@ export default {
         return json(doData, doRes.ok ? 200 : 400);
       }
 
-      // UPDATE PB METADATA (bump version in DO)
+      // UPDATE PB METADATA
       if (parts[3] === "update" && request.method === "POST") {
         const { name, date, time, br, water } = await request.json();
 

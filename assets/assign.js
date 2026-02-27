@@ -18,19 +18,19 @@ if (!pbId) {
 
 document.getElementById("backLink").href = `/pb/roster.html?id=${pbId}`;
 
+let pb = null;
 let roster = [];
 let assignments = { main: [], screening: [] };
-let brLimit = 0;
 let assignVersion = 0;
+let brLimit = 0;
 
 let countdownInterval = null;
 
 // ------------------------------
-// COUNTDOWN TIMER
+// COUNTDOWN
 // ------------------------------
-
-function startCountdown(pbDate, pbTime) {
-  const target = new Date(`${pbDate}T${pbTime}:00Z`).getTime();
+function startCountdown(date, time) {
+  const target = new Date(`${date}T${time}:00Z`).getTime();
 
   if (countdownInterval) clearInterval(countdownInterval);
 
@@ -38,26 +38,27 @@ function startCountdown(pbDate, pbTime) {
     const now = Date.now();
     const diff = target - now;
 
+    const el = document.getElementById("countdownTimer");
+    if (!el) return;
+
     if (diff <= 0) {
-      document.getElementById("countdownTimer").textContent = "Battle is starting!";
+      el.textContent = "Battle is starting!";
       clearInterval(countdownInterval);
       return;
     }
 
-    const days = Math.floor(diff / 86400000);
-    const hours = Math.floor((diff / 3600000) % 24);
-    const mins = Math.floor((diff / 60000) % 60);
-    const secs = Math.floor((diff / 1000) % 60);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff / 3600000) % 24);
+    const m = Math.floor((diff / 60000) % 60);
+    const s = Math.floor((diff / 1000) % 60);
 
-    document.getElementById("countdownTimer").textContent =
-      `${days}d ${hours}h ${mins}m ${secs}s`;
+    el.textContent = `${d}d ${h}h ${m}m ${s}s`;
   }, 1000);
 }
 
 // ------------------------------
 // SAVE INDICATORS
 // ------------------------------
-
 let saveTimeout = null;
 
 function showSaving() {
@@ -85,155 +86,51 @@ function showSaved() {
   const el = document.getElementById("savingIndicator");
   if (!el) return;
   el.textContent = "Saved";
-  setTimeout(() => {
-    el.style.opacity = "0";
-  }, 600);
+  setTimeout(() => (el.style.opacity = "0"), 600);
 }
 
 function scheduleSave() {
   showSaving();
   clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    autoSave();
-  }, 2000);
+  saveTimeout = setTimeout(autoSave, 2000);
 }
 
 // ------------------------------
-// LOAD PB INFO (CACHED)
+// LOAD FULL SNAPSHOT (CACHED)
 // ------------------------------
-
-async function loadPBInfo() {
-  const key = cachePBKey(pbId, "config");
-  const cached = cacheGet(key);
+async function loadFull() {
+  const key = cachePBKey(pbId, "full");
+  const cached = cacheGet(key, 30000);
 
   if (cached) {
-    applyPBInfo(cached);
+    applyFull(cached);
     return;
   }
 
-  const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
-  if (!res.ok) return;
+  const res = await fetch(`${API_BASE}/pb/${pbId}/full`);
+  const data = await res.json();
 
-  const pb = await res.json();
-  cacheSet(key, pb);
-
-  applyPBInfo(pb);
+  cacheSet(key, data);
+  applyFull(data);
 }
 
-function applyPBInfo(pb) {
+function applyFull(data) {
+  pb = data;
+  roster = data.roster || [];
+  assignments = data.assignments || { main: [], screening: [] };
+  assignVersion = data.assignVersion || 0;
+
+  brLimit = Number(pb.br) || 0;
+
   document.getElementById("pbTitle").textContent = pb.name;
   document.getElementById("pbNameText").textContent = pb.name;
   document.getElementById("pbDateText").textContent = pb.date;
   document.getElementById("pbTimeText").textContent = pb.time;
   document.getElementById("pbBRText").textContent = pb.br;
   document.getElementById("pbWaterText").textContent = pb.water;
-
-  brLimit = Number(pb.br) || 0;
   document.getElementById("mainBRLimit").textContent = brLimit;
 
-  assignments = pb.assignments || { main: [], screening: [] };
-  assignVersion = pb.assignVersion || 0;
-
   startCountdown(pb.date, pb.time);
-  enablePBMetaEditing(pb);
-}
-
-// ------------------------------
-// ENABLE PB META EDITING
-// ------------------------------
-
-async function enablePBMetaEditing(pb) {
-  const isOfficer = await verifyOfficerStatus();
-  if (!isOfficer) return;
-
-  document.querySelectorAll(".officerOnly").forEach(el => {
-    el.style.display = "inline-block";
-  });
-
-  document.getElementById("pbNameText").style.display = "none";
-  document.getElementById("pbDateText").style.display = "none";
-  document.getElementById("pbTimeText").style.display = "none";
-  document.getElementById("pbBRText").style.display = "none";
-  document.getElementById("pbWaterText").style.display = "none";
-
-  document.getElementById("pbNameInput").value = pb.name;
-  document.getElementById("pbDateInput").value = pb.date;
-  document.getElementById("pbTimeInput").value = pb.time;
-  document.getElementById("pbBRInput").value = pb.br;
-  document.getElementById("pbWaterInput").value = pb.water;
-}
-
-// ------------------------------
-// SAVE PB META
-// ------------------------------
-
-document.getElementById("savePBMeta")?.addEventListener("click", async () => {
-  const isOfficer = await verifyOfficerStatus();
-  if (!isOfficer) return alert("Officer access required.");
-
-  const name = document.getElementById("pbNameInput").value.trim();
-  const date = document.getElementById("pbDateInput").value;
-  const time = document.getElementById("pbTimeInput").value;
-  const br = document.getElementById("pbBRInput").value;
-  const water = document.getElementById("pbWaterInput").value;
-
-  if (!name || !date || !time || !br || !water) {
-    alert("Please fill in all fields.");
-    return;
-  }
-
-  showSaving();
-
-  const res = await fetch(`${API_BASE}/pb/${pbId}/update`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      date,
-      time,
-      br,
-      water
-    })
-  });
-
-  const data = await res.json();
-
-  if (data.ok) {
-    if (typeof data.assignVersion === "number") {
-      assignVersion = data.assignVersion;
-    }
-
-    cacheRemove(cachePBKey(pbId, "config"));
-
-    showSaved();
-    await loadPBInfo();
-    startCountdown(date, time);
-    renderAssignments();
-  } else {
-    alert("Failed to update battle details.");
-  }
-});
-
-// ------------------------------
-// LOAD ROSTER (CACHED)
-// ------------------------------
-
-async function loadRoster() {
-  const key = cachePBKey(pbId, "roster");
-  const cached = cacheGet(key);
-
-  if (cached) {
-    roster = cached;
-    renderRoster();
-    renderAssignments();
-    enableDragDrop();
-    return;
-  }
-
-  const res = await fetch(`${API_BASE}/pb/${pbId}/roster`);
-  roster = await res.json();
-
-  cacheSet(key, roster);
 
   renderRoster();
   renderAssignments();
@@ -241,8 +138,17 @@ async function loadRoster() {
 }
 
 // ------------------------------
-// RENDER ROSTER + ASSIGNMENTS
+// RENDER
 // ------------------------------
+function makeCard(p) {
+  const div = document.createElement("div");
+  div.className = "card draggable";
+  div.draggable = true;
+  div.dataset.name = p.name;
+  div.dataset.br = p.br;
+  div.textContent = `${p.name} — ${p.ship} (${p.br} BR)`;
+  return div;
+}
 
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
@@ -252,9 +158,7 @@ function renderRoster() {
 
   roster
     .filter(p => !assigned.has(p.name))
-    .forEach(p => {
-      rosterDiv.appendChild(makeCard(p));
-    });
+    .forEach(p => rosterDiv.appendChild(makeCard(p)));
 }
 
 function renderAssignments() {
@@ -309,20 +213,9 @@ function updateBRStatus(mainBR) {
   }
 }
 
-function makeCard(p) {
-  const div = document.createElement("div");
-  div.className = "card draggable";
-  div.draggable = true;
-  div.dataset.name = p.name;
-  div.dataset.br = p.br;
-  div.textContent = `${p.name} — ${p.ship} (${p.br} BR)`;
-  return div;
-}
-
 // ------------------------------
-// AUTO-SAVE ASSIGNMENTS
+// AUTO-SAVE
 // ------------------------------
-
 async function autoSave() {
   const isOfficer = await verifyOfficerStatus();
   if (!isOfficer) return;
@@ -331,15 +224,13 @@ async function autoSave() {
     const res = await fetch(`${API_BASE}/pb/${pbId}/assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        main: assignments.main,
-        screening: assignments.screening
-      })
+      body: JSON.stringify(assignments)
     });
 
     const data = await res.json();
-    if (data.ok && typeof data.assignVersion === "number") {
+    if (data.ok) {
       assignVersion = data.assignVersion;
+      cacheRemove(cachePBKey(pbId, "full"));
     }
 
     showSaved();
@@ -351,7 +242,6 @@ async function autoSave() {
 // ------------------------------
 // DRAG + DROP
 // ------------------------------
-
 function enableDragDrop() {
   document.querySelectorAll(".draggable").forEach(el => {
     el.addEventListener("dragstart", e => {
@@ -382,11 +272,9 @@ function enableDragDrop() {
 }
 
 // ------------------------------
-// INITIALIZE PAGE
+// INIT
 // ------------------------------
-
 (async () => {
   await requireOfficer();
-  await loadPBInfo();
-  await loadRoster();
+  await loadFull();
 })();

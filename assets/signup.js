@@ -10,16 +10,18 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  // Ensure user identity exists
   if (!localStorage.userId) {
     localStorage.userId = crypto.randomUUID();
   }
 
-  // Match EXACT IDs from your HTML
+  // Form elements
   const nameInput = document.getElementById("nameInput");
   const shipSelect = document.getElementById("shipSelect");
   const brInput = document.getElementById("brInput");
   const signupBtn = document.getElementById("signupBtn");
 
+  // PB metadata display
   const pbTitle = document.getElementById("pbTitle");
   const pbDate = document.getElementById("pbDate");
   const pbTime = document.getElementById("pbTime");
@@ -28,37 +30,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const backLink = document.getElementById("backLink");
 
-  if (!nameInput || !shipSelect || !brInput || !signupBtn) {
-    console.error("Signup page elements missing");
-    return;
-  }
-
   // ------------------------------
-  // LOAD PB METADATA (CACHED)
+  // LOAD PB METADATA (from /full)
   // ------------------------------
   async function loadPBMeta() {
-    const key = cachePBKey(pbId, "config");
-    const cached = cacheGet(key);
+    const key = cachePBKey(pbId, "full");
+    const cached = cacheGet(key, 30000);
+
+    let pb;
 
     if (cached) {
-      applyPBMeta(cached);
-      return;
-    }
-
-    try {
-      const res = await fetch(`${API_BASE}/pb/${pbId}/config`);
-      if (!res.ok) {
-        console.error("Failed to load PB metadata");
-        return;
-      }
-
-      const pb = await res.json();
+      pb = cached;
+    } else {
+      const res = await fetch(`${API_BASE}/pb/${pbId}/full`);
+      pb = await res.json();
       cacheSet(key, pb);
-      applyPBMeta(pb);
-
-    } catch (err) {
-      console.error("Error loading PB metadata:", err);
     }
+
+    applyPBMeta(pb);
   }
 
   function applyPBMeta(pb) {
@@ -78,34 +67,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // ------------------------------
   async function loadShips() {
     const key = "ships_json";
+    const cached = cacheGet(key, 86400000); // 24h TTL
 
-    // Cache ships for 24 hours
-    const cached = cacheGet(key, 86400000);
     let ships;
 
     if (cached) {
       ships = cached;
     } else {
-      try {
-        const res = await fetch("/assets/ships.json");
-        if (!res.ok) {
-          console.error("Failed to load /assets/ships.json");
-          return;
-        }
-
-        ships = await res.json();
-        cacheSet(key, ships);
-
-      } catch (err) {
-        console.error("Error loading ships:", err);
-        return;
-      }
+      const res = await fetch("/assets/ships.json");
+      ships = await res.json();
+      cacheSet(key, ships);
     }
 
-    // Clear dropdown
     shipSelect.innerHTML = "";
 
-    // Placeholder
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.textContent = "Select your ship";
@@ -113,7 +88,6 @@ document.addEventListener("DOMContentLoaded", () => {
     placeholder.selected = true;
     shipSelect.appendChild(placeholder);
 
-    // Populate
     ships.forEach(ship => {
       const opt = document.createElement("option");
       opt.value = ship.name;
@@ -122,7 +96,6 @@ document.addEventListener("DOMContentLoaded", () => {
       shipSelect.appendChild(opt);
     });
 
-    // Auto-fill BR
     shipSelect.addEventListener("change", () => {
       const selected = shipSelect.options[shipSelect.selectedIndex];
       brInput.value = selected?.dataset?.br || "";
@@ -130,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ------------------------------
-  // SIGNUP BUTTON HANDLER
+  // SIGNUP HANDLER
   // ------------------------------
   signupBtn.addEventListener("click", async () => {
     const name = nameInput.value.trim();
@@ -166,8 +139,8 @@ document.addEventListener("DOMContentLoaded", () => {
       // Store captain identity
       localStorage.setItem("captainName", name);
 
-      // Invalidate roster cache so roster page reloads fresh
-      cacheRemove(cachePBKey(pbId, "roster"));
+      // Invalidate full PB snapshot so roster/assign reload fresh
+      cacheRemove(cachePBKey(pbId, "full"));
 
       // Redirect
       window.location.href = `/pb/roster.html?id=${pbId}`;
