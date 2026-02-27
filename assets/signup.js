@@ -1,4 +1,4 @@
-const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
 document.addEventListener("DOMContentLoaded", () => {
   const url = new URL(window.location.href);

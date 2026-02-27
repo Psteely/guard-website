@@ -1,6 +1,6 @@
 import { verifyOfficerStatus } from "./auth.js";
 
-const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
 const url = new URL(window.location.href);
 const pbId = url.searchParams.get("id");

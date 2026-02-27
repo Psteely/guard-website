@@ -1,6 +1,6 @@
 // pb-index.js — Port Battle List + Create/Delete PB + Officer Login
 
-const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
 // Elements
 const pbList = document.getElementById("pbList");

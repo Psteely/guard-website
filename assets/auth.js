@@ -1,6 +1,6 @@
 // auth.js — Centralized officer authentication + version enforcement
 
-const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
 // ------------------------------
 // CHECK IF OFFICER + VERSION MATCH

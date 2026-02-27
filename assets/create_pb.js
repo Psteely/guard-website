@@ -4,7 +4,7 @@ console.log("create_pb.js loaded");
 
 
 //const API_BASE = "http://127.0.0.1:8787/api";
-const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
+//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 
 
 document.getElementById("createForm").addEventListener("submit", async (e) => {
