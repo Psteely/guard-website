@@ -18,6 +18,45 @@ let brLimit = 0;
 let countdownInterval = null;
 
 // ------------------------------
+// FLY-IN NOTIFICATIONS
+// ------------------------------
+function showFlyIn(message, type = "success") {
+  const div = document.createElement("div");
+  div.className = `flyin ${type}`;
+  div.textContent = message;
+
+  Object.assign(div.style, {
+    position: "fixed",
+    top: "20px",
+    right: "-300px",
+    padding: "12px 18px",
+    borderRadius: "6px",
+    color: "white",
+    fontWeight: "600",
+    fontSize: "14px",
+    zIndex: "9999",
+    opacity: "0",
+    transition: "all 0.4s ease"
+  });
+
+  if (type === "success") div.style.background = "#2e8b57";
+  if (type === "error") div.style.background = "#c0392b";
+
+  document.body.appendChild(div);
+
+  requestAnimationFrame(() => {
+    div.style.right = "20px";
+    div.style.opacity = "1";
+  });
+
+  setTimeout(() => {
+    div.style.right = "-300px";
+    div.style.opacity = "0";
+    setTimeout(() => div.remove(), 400);
+  }, 3000);
+}
+
+// ------------------------------
 // COUNTDOWN
 // ------------------------------
 function startCountdown(date, time) {
@@ -208,13 +247,25 @@ function updateBRStatus(mainBR) {
 }
 
 // ------------------------------
-// SSE STREAMING
+// SSE WITH RECONNECT
 // ------------------------------
+let sse = null;
+let retryDelay = 1000;
+let sseConnected = false;
+
 function startSSE() {
   const streamUrl = `${API_BASE}/pb/${pbId}/stream`;
-  const evtSource = new EventSource(streamUrl);
+  sse = new EventSource(streamUrl);
 
-  evtSource.onmessage = async (event) => {
+  sse.onopen = () => {
+    if (!sseConnected) {
+      sseConnected = true;
+      retryDelay = 1000;
+      showFlyIn("SSE reconnected", "success");
+    }
+  };
+
+  sse.onmessage = async (event) => {
     const data = JSON.parse(event.data);
 
     if (data.assignVersion !== assignVersion) {
@@ -226,29 +277,19 @@ function startSSE() {
     }
   };
 
-  evtSource.onerror = () => {
-    evtSource.close();
-    startPollingFallback();
-  };
-}
-
-// ------------------------------
-// POLLING FALLBACK
-// ------------------------------
-function startPollingFallback() {
-  setInterval(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/pb/${pbId}/full`);
-      const data = await res.json();
-
-      if (data.assignVersion !== assignVersion) {
-        cacheRemove(cachePBKey(pbId, "full"));
-        await loadFull();
-      }
-    } catch (err) {
-      console.error("Polling failed:", err);
+  sse.onerror = () => {
+    if (sseConnected) {
+      sseConnected = false;
+      showFlyIn("SSE connection lost", "error");
     }
-  }, 30000);
+
+    sse.close();
+
+    setTimeout(() => {
+      retryDelay = Math.min(retryDelay * 2, 30000);
+      startSSE();
+    }, retryDelay);
+  };
 }
 
 // ------------------------------

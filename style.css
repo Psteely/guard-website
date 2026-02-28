@@ -491,4 +491,31 @@ body {
   line-height: 1.4em;
 }
 
+.flyin {
+  position: fixed;
+  top: 20px;
+  right: -300px;
+  padding: 12px 18px;
+  border-radius: 6px;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  transition: all 0.4s ease;
+}
+
+.flyin.show {
+  right: 20px;
+  opacity: 1;
+}
+
+.flyin.success {
+  background: #2e8b57; /* Sea green */
+}
+
+.flyin.error {
+  background: #c0392b; /* Red */
+}
+
 /* Reuse your existing .card, .columns, etc. */
