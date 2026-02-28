@@ -31,6 +31,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const backLink = document.getElementById("backLink");
 
   // ------------------------------
+  // PERMANENT SSE STATUS INDICATOR
+  // ------------------------------
+  function updateSSEStatus(text, ok) {
+    const el = document.getElementById("sseStatus");
+    if (!el) return;
+
+    el.textContent = text;
+    el.classList.toggle("ok", ok === true);
+    el.classList.toggle("fail", ok === false);
+  }
+
+  // ------------------------------
   // LOAD PB METADATA (from /full)
   // ------------------------------
   async function loadPBMeta() {
@@ -152,8 +164,53 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ------------------------------
+  // SSE WITH PERMANENT STATUS
+  // ------------------------------
+  let sse = null;
+  let retryDelay = 1000;
+  let sseConnected = false;
+
+  function startSSE() {
+    const streamUrl = `${API_BASE}/pb/${pbId}/stream`;
+    sse = new EventSource(streamUrl);
+
+    updateSSEStatus("Connecting…", false);
+
+    sse.onopen = () => {
+      sseConnected = true;
+      retryDelay = 1000;
+      updateSSEStatus("SSE Connected", true);
+    };
+
+    sse.onmessage = async (event) => {
+      const data = JSON.parse(event.data);
+
+      // If PB metadata changed, reload it
+      if (data.assignVersion !== undefined) {
+        cacheRemove(cachePBKey(pbId, "full"));
+        await loadPBMeta();
+      }
+    };
+
+    sse.onerror = () => {
+      if (sseConnected) {
+        sseConnected = false;
+        updateSSEStatus("SSE Disconnected", false);
+      }
+
+      sse.close();
+
+      setTimeout(() => {
+        retryDelay = Math.min(retryDelay * 2, 30000);
+        startSSE();
+      }, retryDelay);
+    };
+  }
+
+  // ------------------------------
   // INIT
   // ------------------------------
   loadPBMeta();
   loadShips();
+  startSSE();
 });

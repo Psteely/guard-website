@@ -518,4 +518,22 @@ body {
   background: #c0392b; /* Red */
 }
 
+.sse-status {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: #333;
+    color: #fff;
+    opacity: 0.9;
+}
+.sse-status.ok {
+    background: #2a7f2a;
+}
+.sse-status.fail {
+    background: #a33;
+}
+
 /* Reuse your existing .card, .columns, etc. */
