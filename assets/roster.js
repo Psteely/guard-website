@@ -145,7 +145,7 @@ function applyFull(data) {
 }
 
 // ------------------------------
-// TIME CARDS (SAFE VERSION)
+// TIME CARDS (DST-AWARE VERSION)
 // ------------------------------
 function updateTimeCards() {
   if (!pb) return;
@@ -162,7 +162,6 @@ function updateTimeCards() {
     });
   }
 
-  // Dropdown
   const tzSelect = document.getElementById("timezoneSelect");
   if (!tzSelect) return;
 
@@ -175,8 +174,23 @@ function updateTimeCards() {
       tzSelect.appendChild(opt);
     });
 
-    const saved = localStorage.getItem("preferredGMTOffset");
-    tzSelect.value = saved !== null ? saved : "0";
+    // DST-aware auto-detection
+    const autoOffset = -new Date().getTimezoneOffset() / 60;
+    const savedManual = localStorage.getItem("preferredGMTOffset");
+    const lastAuto = localStorage.getItem("autoDetectedOffset");
+
+    let chosenOffset;
+
+    if (savedManual !== null) {
+      chosenOffset = Number(savedManual);
+    } else {
+      if (lastAuto === null || Number(lastAuto) !== autoOffset) {
+        localStorage.setItem("autoDetectedOffset", autoOffset);
+      }
+      chosenOffset = autoOffset;
+    }
+
+    tzSelect.value = String(chosenOffset);
 
     tzSelect.addEventListener("change", () => {
       localStorage.setItem("preferredGMTOffset", tzSelect.value);
@@ -184,7 +198,7 @@ function updateTimeCards() {
     });
   }
 
-  // Convert PB time using offset
+  // Convert PB time using chosen offset
   const offsetHours = Number(tzSelect.value);
   const localDate = new Date(
     new Date(pbDateTimeGMT).getTime() + offsetHours * 3600 * 1000
@@ -206,12 +220,22 @@ function updateTimeCards() {
 // RENDER ROSTER
 // ------------------------------
 function isAssigned(name) {
-  return assignments.main.includes(name) || assignments.screening.includes(name);
+  return (
+    assignments.main.includes(name) ||
+    assignments.screening.includes(name)
+  );
 }
 
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
+  if (!rosterDiv) return;
+
   rosterDiv.innerHTML = "";
+
+  if (!Array.isArray(roster) || roster.length === 0) {
+    rosterDiv.textContent = "No captains signed up yet.";
+    return;
+  }
 
   roster.forEach(p => {
     const div = document.createElement("div");
@@ -220,6 +244,7 @@ function renderRoster() {
     const tick = isAssigned(p.name) ? " ✔️" : "";
     div.textContent = `${p.name} — ${p.ship} (${p.br} BR)${tick}`;
 
+    // Withdraw button (UUID identity)
     if (p.createdBy === localStorage.userId) {
       const btn = document.createElement("button");
       btn.textContent = "Withdraw";
@@ -310,6 +335,8 @@ function updateBRStatus(mainBR) {
     statusDiv.classList.add("br-ok");
     warningSpan.textContent = "";
   }
+
+  // Screening stays green always — no logic needed
 }
 
 // ------------------------------
