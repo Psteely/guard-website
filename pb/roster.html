@@ -5,7 +5,6 @@
 <head>
   <title>Roster – Admiralty Board</title>
   <link rel="stylesheet" href="../style.css">
-  
 </head>
 
 <body class="admiralty-body">
@@ -41,10 +40,24 @@
 
     <!-- PB Metadata -->
     <div id="pbMeta" style="margin-bottom:20px; color:#ccc; line-height:1.4em;">
-      <div><strong>Date (GMT):</strong> <span id="pbDateText"></span></div>
-      <div><strong>Time (GMT):</strong> <span id="pbTimeText"></span></div>
       <div><strong>BR Limit:</strong> <span id="pbBRText"></span></div>
       <div><strong>Water:</strong> <span id="pbWaterText"></span></div>
+
+      <!-- Time Cards -->
+      <div class="pb-time-wrapper" style="margin-top:15px;">
+        <div class="pb-time-card">
+          <h4>Port Battle Time (GMT)</h4>
+          <div id="pbTimeGMT"></div>
+        </div>
+
+        <div class="pb-time-card local">
+          <h4>Your Local Time</h4>
+          <div id="pbTimeLocal"></div>
+
+          <label for="timezoneSelect">Timezone</label>
+          <select id="timezoneSelect"></select>
+        </div>
+      </div>
     </div>
 
     <!-- COUNTDOWN TIMER -->
@@ -62,20 +75,12 @@
       Battle starts in: <span id="countdownTimer">Loading…</span>
     </div>
 
-    <!-- Officer-only link 
-    <div style="margin-bottom:20px;">
-      <a id="assignLink" href="#" style="display:none; color:#8cf; font-weight:bold;">
-        → Officer Assignment Page
-      </a>
-    </div>
--->
     <h2>Assignments</h2>
 
     <div class="columns">
       <div class="column">
         <h3>Main Port Battle</h3>
 
-        <!-- BR STATUS (same as assign page) -->
         <div id="mainBRStatus" class="br-status br-ok">
           <strong>Total BR:</strong> <span id="mainBR">0</span>
           <strong> / </strong>
@@ -89,7 +94,6 @@
       <div class="column">
         <h3>Screening</h3>
 
-        <!-- BR STATUS -->
         <div id="screeningBRStatus" class="br-status br-ok">
           <strong>Total BR:</strong> <span id="screeningBR">0</span>
         </div>
@@ -111,7 +115,7 @@
 
 </div>
 
-<script type="module" src="/assets/roster.js?v=2"></script>
+<script type="module" src="/assets/roster.js?v=3"></script>
 
 </body>
 </html>

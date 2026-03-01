@@ -18,7 +18,7 @@ let brLimit = 0;
 let countdownInterval = null;
 
 // ------------------------------
-// PERMANENT SSE STATUS INDICATOR
+// SSE STATUS
 // ------------------------------
 function updateSSEStatus(text, ok) {
   const el = document.getElementById("sseStatus");
@@ -60,7 +60,7 @@ function startCountdown(date, time) {
 }
 
 // ------------------------------
-// LOAD FULL SNAPSHOT (CACHED)
+// LOAD FULL SNAPSHOT
 // ------------------------------
 async function loadFull() {
   const key = cachePBKey(pbId, "full");
@@ -91,13 +91,13 @@ function applyFull(data) {
   brLimit = Number(pb.br) || 0;
 
   document.getElementById("pbTitle").textContent = pb.name;
-  document.getElementById("pbDateText").textContent = pb.date;
-  document.getElementById("pbTimeText").textContent = pb.time;
   document.getElementById("pbBRText").textContent = pb.br;
   document.getElementById("pbWaterText").textContent = pb.water;
   document.getElementById("mainBRLimit").textContent = brLimit;
 
   startCountdown(pb.date, pb.time);
+
+  updateTimeCards();
 
   renderRoster();
   renderAssignments();
@@ -113,7 +113,54 @@ function applyFull(data) {
 }
 
 // ------------------------------
-// RENDER
+// TIMEZONE + TIME CARDS
+// ------------------------------
+function updateTimeCards() {
+  if (!pb) return;
+
+  const pbDateTimeGMT = `${pb.date}T${pb.time}:00Z`;
+
+  // GMT card
+  document.getElementById("pbTimeGMT").textContent =
+    new Date(pbDateTimeGMT).toLocaleString("en-GB", {
+      timeZone: "GMT",
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+
+  // Build timezone dropdown if not already done
+  const tzSelect = document.getElementById("timezoneSelect");
+  if (tzSelect.options.length === 0) {
+    const zones = Intl.supportedValuesOf("timeZone");
+    zones.forEach(z => {
+      const opt = document.createElement("option");
+      opt.value = z;
+      opt.textContent = z;
+      tzSelect.appendChild(opt);
+    });
+
+    const saved = localStorage.getItem("preferredTimezone");
+    tzSelect.value = saved || Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+    tzSelect.addEventListener("change", () => {
+      localStorage.setItem("preferredTimezone", tzSelect.value);
+      updateTimeCards();
+    });
+  }
+
+  // Local time card
+  const tz = tzSelect.value;
+  const localTime = new Date(pbDateTimeGMT).toLocaleString("en-GB", {
+    timeZone: tz,
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
+
+  document.getElementById("pbTimeLocal").textContent = `${localTime} (${tz})`;
+}
+
+// ------------------------------
+// RENDER ROSTER
 // ------------------------------
 function isAssigned(name) {
   return assignments.main.includes(name) || assignments.screening.includes(name);
@@ -161,6 +208,9 @@ function renderRoster() {
   });
 }
 
+// ------------------------------
+// RENDER ASSIGNMENTS
+// ------------------------------
 function renderAssignments() {
   const mainDiv = document.getElementById("mainAssignments");
   const screeningDiv = document.getElementById("screeningAssignments");
@@ -220,7 +270,7 @@ function updateBRStatus(mainBR) {
 }
 
 // ------------------------------
-// SSE WITH PERMANENT STATUS
+// SSE
 // ------------------------------
 let sse = null;
 let retryDelay = 1000;
