@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<link rel="icon" type="image/png" sizes="512x512" href="/pics/guard icon 512x512.png">
-<link rel="icon" type="image/png" sizes="1024x1024" href="/pics/guard icon 1024x1024.png">
 <html>
 <head>
   <title>Port Battles – Admiralty Board</title>
   <link rel="stylesheet" href="../style.css">
+
+  <link rel="icon" type="image/png" sizes="512x512" href="/pics/guard icon 512x512.png">
+  <link rel="icon" type="image/png" sizes="1024x1024" href="/pics/guard icon 1024x1024.png">
 </head>
+
 <body class="admiralty-body">
 
 <div class="admiralty-shell">
@@ -13,10 +15,10 @@
   <!-- Sidebar -->
   <aside class="admiralty-sidebar">
     <div class="admiralty-logo">
-        <div class="admiralty-crest">
-        <img src="/pics/guard icon 512x512.png" alt="Admiralty Crest">
-         </div>
-      <div class="admiralty-title">Clan GUARD</div>
+      <div class="admiralty-crest">
+        <img src="/pics/ORDER icon.png" alt="Admiralty Crest">
+      </div>
+      <div class="admiralty-title">Clan ORDER</div>
       <div class="admiralty-subtitle">Clan Operations</div>
     </div>
 
@@ -37,12 +39,12 @@
     <button id="changeOfficerPassword" class="officerOnly">Change Officer Password</button>
 
     <div id="officerLoginArea" style="margin-bottom: 20px;">
-    <button id="officerLoginBtn">Officer Login</button>
+      <button id="officerLoginBtn">Officer Login</button>
     </div>
 
     <!-- Create PB Button -->
     <div style="margin-bottom:20px;">
-      <a id="openCreatePB" class="button">+ Create New Port Battle</a>
+      <button id="openCreatePB" class="button">+ Create New Port Battle</button>
     </div>
 
     <!-- PB List -->
@@ -50,49 +52,49 @@
       Loading port battles...
     </div>
 
-    <!-- CREATE PORT BATTLE MODAL -->
-    <div id="createModal" class="modal" style="display:none;">
-      <div class="modal-content">
-        <span id="closeModal" class="modal-close">&times;</span>
-
-        <h2>Create New Port Battle</h2>
-
-        <div class="modal-field">
-          <label>Name:</label>
-          <input id="pbName" type="text">
-        </div>
-
-        <div class="modal-field">
-          <label>Date:</label>
-          <input id="pbDateInput" type="date">
-        </div>
-
-        <div class="modal-field">
-          <label>Time:</label>
-          <input id="pbTimeInput" type="time">
-        </div>
-
-        <div class="modal-field">
-          <label>BR:</label>
-          <input id="pbBRInput" type="number">
-        </div>
-
-        <div class="modal-field">
-          <label>Water:</label>
-          <select id="pbWaterInput">
-            <option value="shallow">Shallow</option>
-            <option value="deep">Deep</option>
-          </select>
-        </div>
-
-        <button id="createPBBtn" class="button">Create Port Battle</button>
-      </div>
-    </div>
-
   </main>
 
 </div>
 
+
+
+<!-- Create Port Battle Modal -->
+<div id="createModal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h2>Create New Port Battle</h2>
+
+   <label>Name</label>
+<input id="pbName" type="text">
+
+<label>Date</label>
+<input id="pbDateInput" type="date">
+
+<label>Time</label>
+<input id="pbTimeInput" type="time">
+
+<label>BR</label>
+<input id="pbBRInput" type="number">
+
+<label>Water</label>
+<select id="pbWaterInput">
+  <option value="shallow">Shallow</option>
+  <option value="deep">Deep</option>
+</select>
+
+<button id="createPBBtn" class="modal-button">Create Port Battle</button>
+<button id="closeModal" class="modal-close">Cancel</button>
+  </div>
+</div>
 <script type="module" src="/assets/pb-index.js"></script>
+<script>
+document.getElementById("openCreatePB").onclick = () => {
+  document.getElementById("createModal").style.display = "flex";
+};
+
+document.getElementById("closeModal").onclick = () => {
+  document.getElementById("createModal").style.display = "none";
+};
+</script>
+
 </body>
 </html>
