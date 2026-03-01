@@ -44,7 +44,10 @@
 
     <!-- Create PB Button -->
     <div style="margin-bottom:20px;">
-      <button id="openCreatePB" class="button">+ Create New Port Battle</button>
+      <!-- IMPORTANT: starts hidden -->
+      <button id="openCreatePB" class="button" style="display:none;">
+        + Create New Port Battle
+      </button>
     </div>
 
     <!-- PB List -->
@@ -56,44 +59,44 @@
 
 </div>
 
-
-
 <!-- Create Port Battle Modal -->
 <div id="createModal" class="modal-overlay" style="display:none;">
   <div class="modal-box">
     <h2>Create New Port Battle</h2>
 
-   <label>Name</label>
-<input id="pbName" type="text">
+    <label>Name</label>
+    <input id="pbName" type="text">
 
-<label>Date</label>
-<input id="pbDateInput" type="date">
+    <label>Date</label>
+    <input id="pbDateInput" type="date">
 
-<label>Time</label>
-<input id="pbTimeInput" type="time">
+    <label>Time</label>
+    <input id="pbTimeInput" type="time">
 
-<label>BR</label>
-<input id="pbBRInput" type="number">
+    <label>BR</label>
+    <input id="pbBRInput" type="number">
 
-<label>Water</label>
-<select id="pbWaterInput">
-  <option value="shallow">Shallow</option>
-  <option value="deep">Deep</option>
-</select>
+    <label>Water</label>
+    <select id="pbWaterInput">
+      <option value="shallow">Shallow</option>
+      <option value="deep">Deep</option>
+    </select>
 
-<button id="createPBBtn" class="modal-button">Create Port Battle</button>
-<button id="closeModal" class="modal-close">Cancel</button>
+    <button id="createPBBtn" class="modal-button">Create Port Battle</button>
+    <button id="closeModal" class="modal-close">Cancel</button>
   </div>
 </div>
-<script type="module" src="/assets/pb-index.js"></script>
-<script>
-document.getElementById("openCreatePB").onclick = () => {
-  document.getElementById("createModal").style.display = "flex";
-};
 
-document.getElementById("closeModal").onclick = () => {
-  document.getElementById("createModal").style.display = "none";
-};
+<script type="module" src="/assets/pb-index.js"></script>
+
+<script>
+  document.getElementById("openCreatePB").onclick = () => {
+    document.getElementById("createModal").style.display = "flex";
+  };
+
+  document.getElementById("closeModal").onclick = () => {
+    document.getElementById("createModal").style.display = "none";
+  };
 </script>
 
 </body>

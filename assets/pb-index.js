@@ -1,7 +1,7 @@
 // pb-index.js — Port Battle List + Create/Delete PB + Officer Login
 
-//const API_BASE = "https://pb-planner.peter-steely.workers.dev/api";
 import { API_BASE } from "./config.js";
+
 // Elements
 const pbList = document.getElementById("pbList");
 
@@ -12,9 +12,16 @@ const pbList = document.getElementById("pbList");
 function checkOfficerStatus() {
   const isOfficer = localStorage.getItem("isOfficer") === "true";
 
+  // Show/hide all officer-only elements
   document.querySelectorAll(".officerOnly").forEach(el => {
     el.style.display = isOfficer ? "inline-block" : "none";
   });
+
+  // Show/hide Create PB button
+  const createBtn = document.getElementById("openCreatePB");
+  if (createBtn) {
+    createBtn.style.display = isOfficer ? "inline-block" : "none";
+  }
 }
 
 document.getElementById("officerLoginBtn").addEventListener("click", async () => {
@@ -33,8 +40,11 @@ document.getElementById("officerLoginBtn").addEventListener("click", async () =>
     if (data.ok) {
       localStorage.setItem("isOfficer", "true");
       localStorage.setItem("officerVersion", data.version);
+
       alert("Officer access granted.");
-      checkOfficerStatus();
+
+      // Reload so officer-only UI appears immediately
+      window.location.reload();
     } else {
       alert("Incorrect password.");
     }
@@ -73,12 +83,12 @@ document.getElementById("changeOfficerPassword").addEventListener("click", async
     if (data.ok) {
       alert("Officer password updated successfully.");
 
-      // 🔥 FORCE LOGOUT — restore old behavior
+      // Force logout
       localStorage.removeItem("isOfficer");
       localStorage.removeItem("officerVersion");
 
       alert("Password changed. Please log in again.");
-      checkOfficerStatus();
+      window.location.reload();
     } else {
       alert("Password change failed: " + (data.error || "Unknown error"));
     }
