@@ -18,6 +18,39 @@ let brLimit = 0;
 let countdownInterval = null;
 
 // ------------------------------
+// GMT OFFSET LIST
+// ------------------------------
+const TIMEZONE_OFFSETS = [
+  { offset: -12, label: "GMT-12 — Baker Island" },
+  { offset: -11, label: "GMT-11 — Pago Pago" },
+  { offset: -10, label: "GMT-10 — Honolulu" },
+  { offset: -9,  label: "GMT-9 — Anchorage" },
+  { offset: -8,  label: "GMT-8 — Los Angeles" },
+  { offset: -7,  label: "GMT-7 — Denver" },
+  { offset: -6,  label: "GMT-6 — Chicago" },
+  { offset: -5,  label: "GMT-5 — New York" },
+  { offset: -4,  label: "GMT-4 — Halifax" },
+  { offset: -3,  label: "GMT-3 — Buenos Aires" },
+  { offset: -2,  label: "GMT-2 — South Georgia" },
+  { offset: -1,  label: "GMT-1 — Azores" },
+  { offset: 0,   label: "GMT — London" },
+  { offset: 1,   label: "GMT+1 — Berlin" },
+  { offset: 2,   label: "GMT+2 — Athens" },
+  { offset: 3,   label: "GMT+3 — Moscow" },
+  { offset: 4,   label: "GMT+4 — Dubai" },
+  { offset: 5,   label: "GMT+5 — Karachi" },
+  { offset: 6,   label: "GMT+6 — Dhaka" },
+  { offset: 7,   label: "GMT+7 — Bangkok" },
+  { offset: 8,   label: "GMT+8 — Singapore" },
+  { offset: 9,   label: "GMT+9 — Tokyo" },
+  { offset: 10,  label: "GMT+10 — Sydney" },
+  { offset: 11,  label: "GMT+11 — Noumea" },
+  { offset: 12,  label: "GMT+12 — Auckland" },
+  { offset: 13,  label: "GMT+13 — Tonga" },
+  { offset: 14,  label: "GMT+14 — Kiritimati" }
+];
+
+// ------------------------------
 // SSE STATUS
 // ------------------------------
 function updateSSEStatus(text, ok) {
@@ -98,7 +131,6 @@ function applyFull(data) {
   startCountdown(pb.date, pb.time);
 
   updateTimeCards();
-
   renderRoster();
   renderAssignments();
 
@@ -113,7 +145,7 @@ function applyFull(data) {
 }
 
 // ------------------------------
-// TIMEZONE + TIME CARDS
+// TIME CARDS (SAFE VERSION)
 // ------------------------------
 function updateTimeCards() {
   if (!pb) return;
@@ -121,42 +153,53 @@ function updateTimeCards() {
   const pbDateTimeGMT = `${pb.date}T${pb.time}:00Z`;
 
   // GMT card
-  document.getElementById("pbTimeGMT").textContent =
-    new Date(pbDateTimeGMT).toLocaleString("en-GB", {
+  const gmtEl = document.getElementById("pbTimeGMT");
+  if (gmtEl) {
+    gmtEl.textContent = new Date(pbDateTimeGMT).toLocaleString("en-GB", {
       timeZone: "GMT",
       dateStyle: "medium",
       timeStyle: "short"
     });
+  }
 
-  // Build timezone dropdown if not already done
+  // Dropdown
   const tzSelect = document.getElementById("timezoneSelect");
+  if (!tzSelect) return;
+
+  // Build dropdown once
   if (tzSelect.options.length === 0) {
-    const zones = Intl.supportedValuesOf("timeZone");
-    zones.forEach(z => {
+    TIMEZONE_OFFSETS.forEach(tz => {
       const opt = document.createElement("option");
-      opt.value = z;
-      opt.textContent = z;
+      opt.value = tz.offset;
+      opt.textContent = tz.label;
       tzSelect.appendChild(opt);
     });
 
-    const saved = localStorage.getItem("preferredTimezone");
-    tzSelect.value = saved || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const saved = localStorage.getItem("preferredGMTOffset");
+    tzSelect.value = saved !== null ? saved : "0";
 
     tzSelect.addEventListener("change", () => {
-      localStorage.setItem("preferredTimezone", tzSelect.value);
+      localStorage.setItem("preferredGMTOffset", tzSelect.value);
       updateTimeCards();
     });
   }
 
-  // Local time card
-  const tz = tzSelect.value;
-  const localTime = new Date(pbDateTimeGMT).toLocaleString("en-GB", {
-    timeZone: tz,
+  // Convert PB time using offset
+  const offsetHours = Number(tzSelect.value);
+  const localDate = new Date(
+    new Date(pbDateTimeGMT).getTime() + offsetHours * 3600 * 1000
+  );
+
+  const formatted = localDate.toLocaleString("en-GB", {
     dateStyle: "medium",
     timeStyle: "short"
   });
 
-  document.getElementById("pbTimeLocal").textContent = `${localTime} (${tz})`;
+  const localEl = document.getElementById("pbTimeLocal");
+  if (localEl) {
+    localEl.textContent =
+      `${formatted} (GMT${offsetHours >= 0 ? "+" + offsetHours : offsetHours})`;
+  }
 }
 
 // ------------------------------
