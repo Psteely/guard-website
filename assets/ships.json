@@ -44,12 +44,16 @@
   { "id": "ship_cerberus", "name": "Cerberus", "rate": 6, "br": 33, "dlc": false },
   { "id": "ship_la_renommee", "name": "La Renommee", "rate": 6, "br": 38, "dlc": false },
   { "id": "ship_le_requin_dlc", "name": "Le Requin (DLC)", "rate": 6, "br": 30, "dlc": true },
+  { "id": "ship_prince_snow", "name": "Snow", "rate": 6, "br": 27, "dlc": false },
   { "id": "ship_mercury", "name": "Mercury", "rate": 6, "br": 25, "dlc": false },
   { "id": "ship_mortar_brig", "name": "Mortar Brig", "rate": 6, "br": 15, "dlc": false },
   { "id": "ship_rattlesnake_heavy", "name": "Rattlesnake Heavy", "rate": 6, "br": 32, "dlc": false },
   { "id": "ship_le_gros_ventre_refit", "name": "Le Gros Ventre Refit", "rate": 6, "br": 40, "dlc": false },
   { "id": "ship_niagara", "name": "Niagara", "rate": 6, "br": 25, "dlc": false },
   { "id": "ship_prince_de_neufchatel", "name": "Prince de Neufchatel", "rate": 6, "br": 25, "dlc": false },
-
-  { "id": "ship_balloon", "name": "Balloon", "rate": 7, "br": 0, "dlc": false }
+  { "id": "ship_prince_rattlesnake", "name": "Rattlesnak", "rate": 6, "br": 22, "dlc": false },
+  { "id": "ship_prince_navybrig", "name": "Navy Brig", "rate": 6, "br": 22, "dlc": false },
+  { "id": "ship_prince_privateer", "name": "Privateer", "rate": 6, "br": 15, "dlc": false },
+  { "id": "ship_prince_lynx", "name": "Lynx", "rate": 6, "br": 22, "dlc": false }
+  
 ]
