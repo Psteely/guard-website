@@ -166,7 +166,7 @@ function applyFull(data) {
   document.getElementById("pbTimeText").textContent = pb.time;
   document.getElementById("pbBRText").textContent = pb.br;
   document.getElementById("pbWaterText").textContent = pb.water;
-  document.getElementById("mainBRLimit").textContent = brLimit;
+  // document.getElementById("mainBRLimit").textContent = brLimit;
 
   startCountdown(pb.date, pb.time);
 
@@ -229,6 +229,8 @@ function renderAssignments() {
   document.getElementById("screeningBR").textContent = screeningBR;
 
   updateBRStatus(mainBR);
+  updateCombinedBR();
+
 }
 
 function updateBRStatus(mainBR) {
@@ -250,7 +252,34 @@ function updateBRStatus(mainBR) {
     warningSpan.textContent = "";
   }
 }
+function updateCombinedBR() {
+    const mainBR = Number(document.getElementById("mainBR").textContent) || 0;
+    const screeningBR = Number(document.getElementById("screeningBR").textContent) || 0;
 
+    const combined = mainBR + screeningBR;
+    document.getElementById("combinedBR").textContent = combined;
+
+    const limit = Number(pb?.br) || 0;
+    document.getElementById("combinedBRLimit").textContent = limit;
+
+    const statusDiv = document.getElementById("combinedBRStatus");
+    const warningSpan = document.getElementById("combinedBRWarning");
+
+    const ratio = limit ? combined / limit : 0;
+
+    statusDiv.classList.remove("br-ok", "br-warn", "br-over");
+
+    if (ratio >= 1) {
+        statusDiv.classList.add("br-over");
+        warningSpan.textContent = ` — OVER LIMIT by ${combined - limit} BR`;
+    } else if (ratio >= 0.8) {
+        statusDiv.classList.add("br-warn");
+        warningSpan.textContent = ` — Approaching limit`;
+    } else {
+        statusDiv.classList.add("br-ok");
+        warningSpan.textContent = "";
+    }
+}
 // ------------------------------
 // AUTO-SAVE
 // ------------------------------

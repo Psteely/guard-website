@@ -391,3 +391,6 @@ input[type="time"] {
 .hidden {
   display: none !important;
 }
+.br-ok { color: #2ecc71; font-weight: bold; }
+.br-warn { color: #f1c40f; font-weight: bold; }
+.br-over { color: #e74c3c; font-weight: bold; }
