@@ -47,7 +47,10 @@ export class PBRoom {
     for (const n of screening || []) {
       if (set.has(n)) {
         return new Response(
-          JSON.stringify({ ok: false, error: "Duplicate captain in both groups" }),
+          JSON.stringify({
+            ok: false,
+            error: "Duplicate captain in both groups"
+          }),
           {
             status: 400,
             headers: { "Content-Type": "application/json" }
@@ -85,19 +88,12 @@ export class PBRoom {
       );
     }
 
-    this.assignments.main = (this.assignments.main || []).filter(n => n !== name);
-    this.assignments.screening = (this.assignments.screening || []).filter(n => n !== name);
-    this.version += 1;
-    await this.save();
-
-    return new Response(JSON.stringify({ ok: true, assignVersion: this.version }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
-    });
-  }
-
-  async handleBump() {
-    await this.init();
+    this.assignments.main = (this.assignments.main || []).filter(
+      n => n !== name
+    );
+    this.assignments.screening = (this.assignments.screening || []).filter(
+      n => n !== name
+    );
     this.version += 1;
     await this.save();
 
@@ -110,10 +106,23 @@ export class PBRoom {
     );
   }
 
+  async handleBump() {
+    await this.init();
+    this.version += 1;
+    await this.save();
+    return new Response(
+      JSON.stringify({ ok: true, assignVersion: this.version }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+
   async handleStream() {
     await this.init();
-
     const encoder = new TextEncoder();
+
     const headers = {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
@@ -138,7 +147,6 @@ export class PBRoom {
           while (true) {
             await new Promise(r => setTimeout(r, 2000));
             await this.init();
-
             if (this.version !== lastVersion) {
               lastVersion = this.version;
               controller.enqueue(
@@ -218,9 +226,50 @@ export default {
       });
 
     // ------------------------------
+    // Cloudflare Usage Endpoint
+    // ------------------------------
+    if (pathname === "/api/usage") {
+      const today = new Date().toISOString().slice(0, 10);
+
+      const query = `
+      {
+        viewer {
+          accounts(filter: {accountTag: "3325ed80effbf9b08b7e802915c91130"}) {
+            workersInvocations(
+              limit: 1,
+              filter: {
+                scriptName: "pb-planner",
+                datetime_geq: "${today}T00:00:00Z"
+              }
+            ) {
+              sum { requests }
+            }
+          }
+        }
+      }
+      `;
+
+      const cfRes = await fetch("https://api.cloudflare.com/client/v4/graphql", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${env.CF_API_TOKEN}`
+        },
+        body: JSON.stringify({ query })
+      });
+
+      const data = await cfRes.json();
+
+      const requests =
+        data?.data?.viewer?.accounts?.[0]?.workersInvocations?.[0]?.sum
+          ?.requests || 0;
+
+      return json({ requests, limit: 100000 });
+    }
+
+    // ------------------------------
     // PB INDEX HELPERS
     // ------------------------------
-
     async function loadIndex(env) {
       const raw = await env.PB.get("PB_INDEX", { type: "json" });
       return Array.isArray(raw) ? raw : [];
@@ -260,7 +309,6 @@ export default {
     // ------------------------------
     // OFFICER PASSWORD
     // ------------------------------
-
     if (pathname === "/api/officer/version" && request.method === "GET") {
       const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
       return json({ version: data?.version || 0 });
@@ -269,7 +317,10 @@ export default {
     if (pathname === "/api/officer/check" && request.method === "POST") {
       const { password } = await request.json();
       const data = await env.PB.get("OFFICER_PASSWORD", { type: "json" });
-      return json({ ok: data?.password === password, version: data?.version || 0 });
+      return json({
+        ok: data?.password === password,
+        version: data?.version || 0
+      });
     }
 
     if (pathname === "/api/officer/password" && request.method === "POST") {
@@ -292,7 +343,6 @@ export default {
     // ------------------------------
     // PB LIST
     // ------------------------------
-
     if (pathname === "/api/pb/list" && request.method === "GET") {
       try {
         const ids = await loadIndex(env);
@@ -327,7 +377,6 @@ export default {
     // ------------------------------
     // PB CREATE
     // ------------------------------
-
     if (pathname === "/api/pb/create" && request.method === "POST") {
       const body = await request.json();
 
@@ -355,15 +404,36 @@ export default {
     // ------------------------------
     // PB-SPECIFIC ROUTES
     // ------------------------------
-
     if (pathname.startsWith("/api/pb/")) {
-      const parts = pathname.split("/").filter(Boolean);
+      const parts = pathname.split("/").filter(Boolean); // ["api","pb",":id",...]
       const id = parts[2];
 
       const pb = await loadPB(env, id);
       if (!pb) return json({ error: "Not found" }, 404);
 
       const stub = getRoomStub(env, id);
+
+      // ------------------------------
+      // NEW: FULL SNAPSHOT ENDPOINT
+      // ------------------------------
+      if (parts[3] === "full" && request.method === "GET") {
+        const doRes = await stub.fetch("https://do/state");
+        const doData = await doRes.json();
+
+        return json({
+          ok: true,
+          id: pb.id,
+          name: pb.name,
+          date: pb.date,
+          time: pb.time,
+          br: pb.br,
+          water: pb.water,
+          created: pb.created,
+          roster: pb.roster || [],
+          assignments: doData.assignments || { main: [], screening: [] },
+          assignVersion: doData.assignVersion || 0
+        });
+      }
 
       // DELETE PB
       if (parts.length === 3 && request.method === "DELETE") {
@@ -376,7 +446,7 @@ export default {
       if (parts[3] === "stream" && request.method === "GET") {
         const doRes = await stub.fetch("https://do/stream", {
           method: "GET",
-          headers: { "Accept": "text/event-stream" }
+          headers: { Accept: "text/event-stream" }
         });
 
         const headers = new Headers(doRes.headers);
@@ -388,7 +458,7 @@ export default {
         });
       }
 
-      // CONFIG (merge PB metadata + DO assignments)
+      // CONFIG
       if (parts[3] === "config" && request.method === "GET") {
         const doRes = await stub.fetch("https://do/state");
         const doData = await doRes.json();
@@ -414,19 +484,29 @@ export default {
       // SIGNUP
       if (parts[3] === "signup" && request.method === "POST") {
         const body = await request.json();
-        pb.roster = pb.roster || [];
+        const pbCurrent = await loadPB(env, id);
 
-        if (pb.roster.some(p => p.name === body.name)) {
-          return json({ ok: false, error: "Name already signed up" }, 400);
+        pbCurrent.roster = pbCurrent.roster || [];
+
+        if (pbCurrent.roster.some(p => p.name === body.name)) {
+          return json(
+            { ok: false, error: "Name already signed up" },
+            400
+          );
         }
 
-        pb.roster.push({
+        pbCurrent.roster.push({
           name: body.name,
           ship: body.ship,
-          br: body.br
+          br: body.br,
+          createdBy: body.createdBy
         });
 
-        await savePB(env, id, pb);
+        await savePB(env, id, pbCurrent);
+
+        const stub = getRoomStub(env, id);
+        await stub.fetch("https://do/bump", { method: "POST" });
+
         return json({ ok: true });
       }
 
@@ -434,13 +514,12 @@ export default {
       if (parts[3] === "remove" && request.method === "DELETE") {
         const name = decodeURIComponent(parts[4]);
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
-
         await savePB(env, id, pb);
 
-        // Also remove from assignments in DO
-        await stub.fetch(`https://do/removeCaptain?name=${encodeURIComponent(name)}`, {
-          method: "POST"
-        });
+        await stub.fetch(
+          `https://do/removeCaptain?name=${encodeURIComponent(name)}`,
+          { method: "POST" }
+        );
 
         return json({ ok: true });
       }
@@ -448,14 +527,13 @@ export default {
       // WITHDRAW (captain)
       if (parts[3] === "withdraw" && request.method === "DELETE") {
         const name = decodeURIComponent(parts[4]);
-
         pb.roster = (pb.roster || []).filter(p => p.name !== name);
         await savePB(env, id, pb);
 
-        // Also remove from assignments in DO
-        await stub.fetch(`https://do/removeCaptain?name=${encodeURIComponent(name)}`, {
-          method: "POST"
-        });
+        await stub.fetch(
+          `https://do/removeCaptain?name=${encodeURIComponent(name)}`,
+          { method: "POST" }
+        );
 
         return json({ ok: true });
       }
@@ -477,7 +555,7 @@ export default {
         return json(doData, doRes.ok ? 200 : 400);
       }
 
-      // UPDATE PB METADATA (bump version in DO)
+      // UPDATE PB METADATA
       if (parts[3] === "update" && request.method === "POST") {
         const { name, date, time, br, water } = await request.json();
 
@@ -489,7 +567,9 @@ export default {
 
         await savePB(env, id, pb);
 
-        const bumpRes = await stub.fetch("https://do/bump", { method: "POST" });
+        const bumpRes = await stub.fetch("https://do/bump", {
+          method: "POST"
+        });
         const bumpData = await bumpRes.json();
 
         return json({ ok: true, assignVersion: bumpData.assignVersion });
