@@ -226,6 +226,15 @@ function isAssigned(name) {
   );
 }
 
+function sortRoster(a, b) {
+    const score = captain => {
+        if (captain.signedUp) return 0;          // group 1: signed up
+        if (!captain.assignment) return 1;       // group 2: unallocated
+        return 2;                                // group 3: allocated
+    };
+    return score(a) - score(b);
+}
+
 function renderRoster() {
   const rosterDiv = document.getElementById("roster");
   if (!rosterDiv) return;
@@ -236,6 +245,23 @@ function renderRoster() {
     rosterDiv.textContent = "No captains signed up yet.";
     return;
   }
+
+  // Compute state for sorting
+  roster.forEach(p => {
+    p.isMine = p.createdBy === localStorage.userId;   // has Withdraw
+    p.isAssigned = isAssigned(p.name);                // has tick
+    p.isUnassigned = !p.isAssigned;                   // no tick
+  });
+
+  // Sort: my signups → unallocated → allocated
+  roster.sort((a, b) => {
+    const score = p => {
+      if (p.isMine) return 0;         // my signups (Withdraw)
+      if (p.isUnassigned) return 1;   // no tick
+      return 2;                       // tick (allocated)
+    };
+    return score(a) - score(b);
+  });
 
   roster.forEach(p => {
     const div = document.createElement("div");
@@ -275,6 +301,7 @@ function renderRoster() {
     rosterDiv.appendChild(div);
   });
 }
+
 
 // ------------------------------
 // RENDER ASSIGNMENTS
