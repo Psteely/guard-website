@@ -166,7 +166,7 @@ function applyFull(data) {
   document.getElementById("pbTimeText").textContent = pb.time;
   document.getElementById("pbBRText").textContent = pb.br;
   document.getElementById("pbWaterText").textContent = pb.water;
-  // document.getElementById("mainBRLimit").textContent = brLimit;
+  //document.getElementById("mainBRLimit").textContent = brLimit;
 
   startCountdown(pb.date, pb.time);
 
@@ -228,30 +228,30 @@ function renderAssignments() {
   document.getElementById("mainBR").textContent = mainBR;
   document.getElementById("screeningBR").textContent = screeningBR;
 
-  updateBRStatus(mainBR);
+  //updateBRStatus(mainBR);
   updateCombinedBR();
 
 }
 
-function updateBRStatus(mainBR) {
-  const statusDiv = document.getElementById("brStatus");
-  const warningSpan = document.getElementById("brWarning");
+//function updateBRStatus(mainBR) {
+ // const statusDiv = document.getElementById("brStatus");
+ // const warningSpan = document.getElementById("brWarning");
 
-  const ratio = brLimit ? mainBR / brLimit : 0;
+ // const ratio = brLimit ? mainBR / brLimit : 0;
 
-  statusDiv.classList.remove("br-ok", "br-warn", "br-over");
+//  statusDiv.classList.remove("br-ok", "br-warn", "br-over");
 
-  if (ratio >= 1) {
-    statusDiv.classList.add("br-over");
-    warningSpan.textContent = ` — OVER LIMIT by ${mainBR - brLimit} BR`;
-  } else if (ratio >= 0.8) {
-    statusDiv.classList.add("br-warn");
-    warningSpan.textContent = ` — Approaching limit`;
-  } else {
-    statusDiv.classList.add("br-ok");
-    warningSpan.textContent = "";
-  }
-}
+//  if (ratio >= 1) {
+//    statusDiv.classList.add("br-over");
+ //   warningSpan.textContent = ` — OVER LIMIT by ${mainBR - brLimit} BR`;
+ // } else if (ratio >= 0.8) {
+ //   statusDiv.classList.add("br-warn");
+ //   warningSpan.textContent = ` — Approaching limit`;
+ // } else {
+ //   statusDiv.classList.add("br-ok");
+//    warningSpan.textContent = "";
+//  }
+//}
 function updateCombinedBR() {
     const mainBR = Number(document.getElementById("mainBR").textContent) || 0;
     const screeningBR = Number(document.getElementById("screeningBR").textContent) || 0;
