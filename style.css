@@ -458,10 +458,10 @@ input[type="time"] {
   cursor: pointer;
 }
 .pb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 1.5rem;
-  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1rem 0;
 }
 .pb-past {
   position: relative;
