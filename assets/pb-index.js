@@ -113,32 +113,53 @@ async function loadPBs() {
     return;
   }
 
-  let html = "<div class='pb-list'>";
+  // ------------------------------
+  // SORT BY DATE + TIME ASCENDING
+  // ------------------------------
+  data.sort((a, b) => {
+    const aDT = new Date(`${a.date}T${a.time}`);
+    const bDT = new Date(`${b.date}T${b.time}`);
+    return aDT - bDT;
+  });
 
-  data.forEach(pb => {
-    html += `
-      <div class="pb-card">
-        <h3>${pb.name}</h3>
-        <div>Date: ${pb.date}</div>
-        <div>Time: ${pb.time}</div>
-        <div>BR: ${pb.br}</div>
-        <div>Water: ${pb.water}</div>
+  let html = "<div class='pb-grid'>";
 
-        <div class="pb-links">
-          <a href="/pb/roster.html?id=${pb.id}">Roster</a> |
-          <a href="/pb/signup.html?id=${pb.id}">Signup</a> |
-          <a href="/pb/assign.html?id=${pb.id}" class="officerOnly assignBtn">Assign</a>
+data.forEach(pb => {
+  const pbDateTime = new Date(`${pb.date}T${pb.time}`);
+  const now = new Date();
+  const isPast = pbDateTime < now;
+
+  html += `
+    <div class="pb-battle-card ${isPast ? "pb-past" : ""}">
+      
+      <div class="pb-card-header">
+        <h2 class="pb-battle-title">${pb.name}</h2>
+        <span class="pb-status">${pb.water}</span>
+      </div>
+
+      <div class="pb-card-body">
+        <div class="pb-meta">
+          <p><strong>Date:</strong> ${pb.date}</p>
+          <p><strong>Time:</strong> ${pb.time}</p>
+          <p><strong>BR:</strong> ${pb.br}</p>
+          <p><strong>Water:</strong> ${pb.water}</p>
         </div>
 
-        <button class="pb-delete officerOnly deleteBtn" data-id="${pb.id}">Delete</button>
+        <div class="pb-actions">
+          <a href="/pb/roster.html?id=${pb.id}" class="pb-link">Roster</a>
+          <a href="/pb/signup.html?id=${pb.id}" class="pb-link">Signup</a>
+          <a href="/pb/assign.html?id=${pb.id}" class="pb-link officerOnly">Assign</a>
+          <button class="pb-delete officerOnly" data-id="${pb.id}">Delete</button>
+        </div>
       </div>
-    `;
-  });
+
+    </div>
+  `;
+});
 
   html += "</div>";
   pbList.innerHTML = html;
 
-  // Re-check officer visibility AFTER cards are created
   checkOfficerStatus();
 }
 
