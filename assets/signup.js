@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     applyPBMeta(pb);
+    return pb;
   }
 
   function applyPBMeta(pb) {
@@ -77,42 +78,71 @@ document.addEventListener("DOMContentLoaded", () => {
   // ------------------------------
   // LOAD SHIPS (CACHED)
   // ------------------------------
-  async function loadShips() {
-    const key = "ships_json";
-    const cached = cacheGet(key, 86400000); // 24h TTL
+// ------------------------------
+// LOAD SHIPS FILTERED BY PB BR
+// ------------------------------
+async function loadShips(pbBRValue) {
+  // Load ships.json (cached)
+  const shipsKey = "ships_json";
+  let ships = cacheGet(shipsKey, 86400000);
 
-    let ships;
-
-    if (cached) {
-      ships = cached;
-    } else {
-      const res = await fetch("/assets/ships.json");
-      ships = await res.json();
-      cacheSet(key, ships);
-    }
-
-    shipSelect.innerHTML = "";
-
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "Select your ship";
-    placeholder.disabled = true;
-    placeholder.selected = true;
-    shipSelect.appendChild(placeholder);
-
-    ships.forEach(ship => {
-      const opt = document.createElement("option");
-      opt.value = ship.name;
-      opt.textContent = `${ship.name} (${ship.br} BR)`;
-      opt.dataset.br = ship.br;
-      shipSelect.appendChild(opt);
-    });
-
-    shipSelect.addEventListener("change", () => {
-      const selected = shipSelect.options[shipSelect.selectedIndex];
-      brInput.value = selected?.dataset?.br || "";
-    });
+  if (!ships) {
+    const res = await fetch("/assets/ships.json");
+    ships = await res.json();
+    cacheSet(shipsKey, ships);
   }
+
+  // Load br-rules.json (cached)
+  const rulesKey = "br_rules_json";
+  let rules = cacheGet(rulesKey, 86400000);
+
+  if (!rules) {
+    const res = await fetch("/assets/br-rules.json");
+    rules = await res.json();
+    cacheSet(rulesKey, rules);
+  }
+
+  // Find rule block matching this PB BR
+  const rule = rules.find(r => r.battleBR.includes(pbBRValue));
+
+  if (!rule) {
+    console.error("No BR rule found for PB BR:", pbBRValue);
+    shipSelect.innerHTML = `<option>No valid ships for BR ${pbBRValue}</option>`;
+    return;
+  }
+
+  // Filter ships by allowed BR range
+  const allowedShips = ships.filter(s =>
+    s.br >= rule.minBR && s.br <= rule.maxBR
+  );
+
+  // Sort by BR ascending
+  allowedShips.sort((a, b) => a.br - b.br);
+
+  // Populate dropdown
+  shipSelect.innerHTML = "";
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select your ship";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  shipSelect.appendChild(placeholder);
+
+  allowedShips.forEach(ship => {
+    const opt = document.createElement("option");
+    opt.value = ship.name;
+    opt.textContent = `${ship.name} (${ship.br} BR)`;
+    opt.dataset.br = ship.br;
+    shipSelect.appendChild(opt);
+  });
+
+  // Auto-fill BR when ship selected
+  shipSelect.addEventListener("change", () => {
+    const selected = shipSelect.options[shipSelect.selectedIndex];
+    brInput.value = selected?.dataset?.br || "";
+  });
+}
 
   // ------------------------------
   // SIGNUP HANDLER
@@ -207,10 +237,18 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // ------------------------------
-  // INIT
-  // ------------------------------
-  loadPBMeta();
-  loadShips();
+ // ------------------------------
+// INIT
+// ------------------------------
+async function init() {
+  const pb = await loadPBMeta();   // load metadata first
+  const pbBRValue = Number(pb.br); // convert PB BR to number
+  loadShips(pbBRValue);            // now filter ships correctly
+  
   startSSE();
+}
+
+
+
+init();
 });

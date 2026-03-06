@@ -1,0 +1,17 @@
+[
+  {
+    "minBR": 13,
+    "maxBR": 40,
+    "battleBR": [325, 1000]
+  },
+  {
+    "minBR": 15,
+    "maxBR": 120,
+    "battleBR": [1450, 2975]
+  },
+  {
+    "minBR": 15,
+    "maxBR": 353,
+    "battleBR": [3300, 6000]
+  }
+]

@@ -54,6 +54,6 @@
   { "id": "ship_prince_rattlesnake", "name": "Rattlesnak", "rate": 6, "br": 22, "dlc": false },
   { "id": "ship_prince_navybrig", "name": "Navy Brig", "rate": 6, "br": 22, "dlc": false },
   { "id": "ship_prince_privateer", "name": "Privateer", "rate": 6, "br": 15, "dlc": false },
-  { "id": "ship_prince_lynx", "name": "Lynx", "rate": 6, "br": 22, "dlc": false }
+  { "id": "ship_prince_lynx", "name": "Lynx", "rate": 6, "br": 13, "dlc": false }
   
 ]

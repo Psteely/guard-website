@@ -483,3 +483,49 @@ input[type="time"] {
   pointer-events: none;
   text-shadow: 0 0 4px #000;
 }
+
+.br-rules-panel {
+  margin-top: 2rem;
+  padding: 1rem;
+  background: #0e1a2b;
+  border: 1px solid #c9a86a;
+  border-radius: 8px;
+  color: #e8d9b5;
+}
+
+.br-rule-block {
+  margin-bottom: 1.5rem;
+}
+
+.br-rule-block h3 {
+  margin: 0 0 0.5rem 0;
+  color: #c9a86a;
+}
+
+.br-rule-block p {
+  margin: 0.25rem 0;
+}
+.br-rules-panel {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.br-rule-card {
+  background: #0e1a2b;
+  border: 1px solid #c9a86a;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  color: #e8d9b5;
+}
+
+.br-rule-card h3 {
+  margin: 0 0 0.5rem 0;
+  color: #c9a86a;
+  font-size: 1.2rem;
+}
+
+.br-rule-card p {
+  margin: 0.25rem 0;
+}
