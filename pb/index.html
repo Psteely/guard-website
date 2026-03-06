@@ -41,9 +41,8 @@
       <button id="officerLoginBtn">Officer Login</button>
     </div>
 
-    <!-- Create PB Button  extra push-->
+    <!-- Create PB Button -->
     <div style="margin-bottom:20px;">
-      <!-- IMPORTANT: starts hidden -->
       <button id="openCreatePB" class="button" style="display:none;">
         + Create New Port Battle
       </button>
@@ -63,8 +62,10 @@
   <div class="modal-box">
     <h2>Create New Port Battle</h2>
 
-    <label>Name</label>
-    <input id="pbName" type="text">
+    <!-- SEARCHABLE PORT INPUT -->
+    <label>Port</label>
+    <input id="pbName" list="portsList">
+    <datalist id="portsList"></datalist>
 
     <label>Date</label>
     <input id="pbDateInput" type="date">
@@ -73,18 +74,48 @@
     <input id="pbTimeInput" type="time">
 
     <label>BR</label>
-    <input id="pbBRInput" type="number">
+    <input id="pbBRInput" type="number" readonly>
 
     <label>Water</label>
-    <select id="pbWaterInput">
-      <option value="shallow">Shallow</option>
-      <option value="deep">Deep</option>
-    </select>
+    <input id="pbWaterInput" readonly>
 
     <button id="createPBBtn" class="modal-button">Create Port Battle</button>
     <button id="closeModal" class="modal-close">Cancel</button>
   </div>
 </div>
+
+<script>
+let ports = [];
+
+// Load ports.json and populate datalist
+async function loadPortsForModal() {
+  const response = await fetch('/assets/ports.json'); // your correct path
+  ports = await response.json();
+
+  const list = document.getElementById('portsList');
+
+  ports.forEach(port => {
+    const opt = document.createElement('option');
+    opt.value = port.name;
+    list.appendChild(opt);
+  });
+}
+
+// When user selects a port (typed or clicked)
+function onModalPortSelected() {
+  const name = document.getElementById('pbName').value;
+  const port = ports.find(p => p.name === name);
+  if (!port) return;
+
+  document.getElementById('pbBRInput').value = port.brLimit;
+  document.getElementById('pbWaterInput').value = port.shallow ? "shallow" : "deep";
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadPortsForModal();
+  document.getElementById('pbName').addEventListener('input', onModalPortSelected);
+});
+</script>
 
 <script type="module" src="/assets/pb-index.js"></script>
 

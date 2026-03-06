@@ -1,6 +1,6 @@
 // create_pb.js
 
-console.log("create_pb.js loaded");
+
 
 import { API_BASE } from "./config.js";
 //const API_BASE = "http://127.0.0.1:8787/api";

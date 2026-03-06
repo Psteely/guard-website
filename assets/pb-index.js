@@ -180,7 +180,7 @@ async function createPB() {
   const name = document.getElementById("pbName").value.trim();
   const date = document.getElementById("pbDateInput").value;
   const time = document.getElementById("pbTimeInput").value;
-  const br = document.getElementById("pbBRInput").value;
+  const br = Number(document.getElementById("pbBRInput").value);   // FIXED
   const water = document.getElementById("pbWaterInput").value;
 
   if (!name || !date || !time || !br || !water) {

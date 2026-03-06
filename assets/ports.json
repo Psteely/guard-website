@@ -28,244 +28,9 @@
     "region": "Bahamas",
     "shallow": true
   },
-  {
-    "angle": 336,
-    "brLimit": 550,
-    "coordinates": [4130, 6244],
-    "county": "Grand Bahama",
-    "countyCapital": false,
-    "countyCapitalName": "West End",
-    "id": 5,
-    "name": "Road Rocks",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 29,
-    "brLimit": 550,
-    "coordinates": [4230, 6404],
-    "county": "Abaco",
-    "countyCapital": false,
-    "countyCapitalName": "Marsh Harbour",
-    "id": 6,
-    "name": "Turtle Cay",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 297,
-    "brLimit": 550,
-    "coordinates": [4329, 6171],
-    "county": "Abaco",
-    "countyCapital": false,
-    "countyCapitalName": "Marsh Harbour",
-    "id": 8,
-    "name": "Little Harbour",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 180,
-    "brLimit": 800,
-    "coordinates": [4342, 6265],
-    "county": "Abaco",
-    "countyCapital": true,
-    "countyCapitalName": "Marsh Harbour",
-    "id": 9,
-    "name": "Marsh Harbour",
-    "portBattleType": "Small",
-    "portPoints": 40,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 90,
-    "brLimit": 325,
-    "coordinates": [3868, 5974],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "Morgan’s Bluff",
-    "id": 10,
-    "name": "Bimini",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 228,
-    "brLimit": 550,
-    "coordinates": [3942, 5736],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "Morgan’s Bluff",
-    "id": 11,
-    "name": "Mimbres",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 162,
-    "brLimit": 800,
-    "coordinates": [4074, 5883],
-    "county": "",
-    "countyCapital": true,
-    "countyCapitalName": "Morgan’s Bluff",
-    "id": 12,
-    "name": "Morgan’s Bluff",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 180,
-    "brLimit": 550,
-    "coordinates": [4258, 5850],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 14,
-    "name": "Nassau",
-    "portBattleType": "Small",
-    "portPoints": 55,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 187,
-    "brLimit": 550,
-    "coordinates": [4389, 5953],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "Governor’s Harbour",
-    "id": 15,
-    "name": "Harbour Island",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 60,
-    "brLimit": 800,
-    "coordinates": [4479, 5877],
-    "county": "",
-    "countyCapital": true,
-    "countyCapitalName": "Governor’s Harbour",
-    "id": 16,
-    "name": "Governor’s Harbour",
-    "portBattleType": "Small",
-    "portPoints": 40,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 45,
-    "brLimit": 550,
-    "coordinates": [4616, 5738],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "George’s Town",
-    "id": 17,
-    "name": "Arthur’s Town",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 180,
-    "brLimit": 800,
-    "coordinates": [4571, 5556],
-    "county": "",
-    "countyCapital": true,
-    "countyCapitalName": "George’s Town",
-    "id": 18,
-    "name": "George’s Town",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 103,
-    "brLimit": 550,
-    "coordinates": [4718, 5460],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "George’s Town",
-    "id": 20,
-    "name": "Deadman’s Cay",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 282,
-    "brLimit": 325,
-    "coordinates": [4644, 5204],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "Pitt’s Town",
-    "id": 21,
-    "name": "Ragged Cay",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 243,
-    "brLimit": 550,
-    "coordinates": [4860, 5596],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "George’s Town",
-    "id": 22,
-    "name": "Watlings",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 40,
-    "brLimit": 3000,
-    "coordinates": [4907, 5347],
-    "county": "",
-    "countyCapital": true,
-    "countyCapitalName": "Pitt’s Town",
-    "id": 23,
-    "name": "Pitt’s Town",
-    "portBattleType": "Large",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": false
-  },
-  {
-    "angle": 186,
-    "brLimit": 550,
-    "coordinates": [5202, 5330],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "Pitt’s Town",
-    "id": 26,
-    "name": "Mayaguana",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
+  
+
+
   {
     "angle": 67,
     "brLimit": 6000,
@@ -826,20 +591,7 @@
     "region": "Hispaniola",
     "shallow": false
   },
-  {
-    "angle": 6,
-    "brLimit": 5000,
-    "coordinates": [5270, 4687],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 96,
-    "name": "La Tortue",
-    "portBattleType": "Medium",
-    "portPoints": 30,
-    "region": "Hispaniola",
-    "shallow": false
-  },
+  
   {
     "angle": 218,
     "brLimit": 6000,
@@ -966,20 +718,7 @@
     "region": "Hispaniola",
     "shallow": false
   },
-  {
-    "angle": 45,
-    "brLimit": 4000,
-    "coordinates": [6368, 4227],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 112,
-    "name": "La Mona",
-    "portBattleType": "Medium",
-    "portPoints": 30,
-    "region": "Puerto Rico",
-    "shallow": false
-  },
+  
   {
     "angle": 63,
     "brLimit": 3300,
@@ -1246,20 +985,7 @@
     "region": "Central Antilles",
     "shallow": false
   },
-  {
-    "angle": 135,
-    "brLimit": 4000,
-    "coordinates": [7357, 3614],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 150,
-    "name": "Aves",
-    "portBattleType": "Medium",
-    "portPoints": 30,
-    "region": "Central Antilles",
-    "shallow": false
-  },
+ 
   {
     "angle": 74,
     "brLimit": 3300,
@@ -1498,20 +1224,7 @@
     "region": "South America",
     "shallow": false
   },
-  {
-    "angle": 354,
-    "brLimit": 4000,
-    "coordinates": [7979, 2334],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 179,
-    "name": "Guayaguayare",
-    "portBattleType": "Medium",
-    "portPoints": 30,
-    "region": "South America",
-    "shallow": false
-  },
+ 
   {
     "angle": 186,
     "brLimit": 1450,
@@ -1820,20 +1533,7 @@
     "region": "South America",
     "shallow": false
   },
-  {
-    "angle": 301,
-    "brLimit": 4000,
-    "coordinates": [4322, 1806],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 214,
-    "name": "Dariena",
-    "portBattleType": "Medium",
-    "portPoints": 30,
-    "region": "Central America",
-    "shallow": false
-  },
+ 
   {
     "angle": 146,
     "brLimit": 3300,
@@ -1960,20 +1660,7 @@
     "region": "Central America",
     "shallow": false
   },
-  {
-    "angle": 90,
-    "brLimit": 4000,
-    "coordinates": [2942, 2778],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 231,
-    "name": "Great Corn",
-    "portBattleType": "Medium",
-    "portPoints": 30,
-    "region": "Central America",
-    "shallow": false
-  },
+ 
   {
     "angle": 263,
     "brLimit": 3300,
@@ -2660,20 +2347,7 @@
     "region": "Atlantic Coast",
     "shallow": false
   },
-  {
-    "angle": 225,
-    "brLimit": 4000,
-    "coordinates": [2161, 5131],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "",
-    "id": 343,
-    "name": "Tumbado",
-    "portBattleType": "Medium",
-    "portPoints": 30,
-    "region": "Yucatan",
-    "shallow": false
-  },
+  
   {
     "angle": 319,
     "brLimit": 3300,
@@ -2758,90 +2432,8 @@
     "region": "Atlantic",
     "shallow": false
   },
-  {
-    "angle": 60,
-    "brLimit": 550,
-    "coordinates": [4029, 6360],
-    "county": "Grand Bahama",
-    "countyCapital": false,
-    "countyCapitalName": "West End",
-    "id": 358,
-    "name": "Mangrove Cay",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 140,
-    "brLimit": 550,
-    "coordinates": [4050, 6204],
-    "county": "Grand Bahama",
-    "countyCapital": false,
-    "countyCapitalName": "West End",
-    "id": 360,
-    "name": "Water Bay",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 11,
-    "brLimit": 550,
-    "coordinates": [4186, 6339],
-    "county": "Abaco",
-    "countyCapital": false,
-    "countyCapitalName": "Marsh Harbour",
-    "id": 361,
-    "name": "Crown Haven",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 187,
-    "brLimit": 550,
-    "coordinates": [4067, 6043],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "Morgan’s Bluff",
-    "id": 362,
-    "name": "Little Isaac Rocks",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 291,
-    "brLimit": 550,
-    "coordinates": [4294, 6037],
-    "county": "Abaco",
-    "countyCapital": false,
-    "countyCapitalName": "Marsh Harbour",
-    "id": 363,
-    "name": "La Desconocida",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
-  {
-    "angle": 90,
-    "brLimit": 550,
-    "coordinates": [4074, 5822],
-    "county": "",
-    "countyCapital": false,
-    "countyCapitalName": "Morgan’s Bluff",
-    "id": 364,
-    "name": "William’s Bay",
-    "portBattleType": "Small",
-    "portPoints": 30,
-    "region": "Bahamas",
-    "shallow": true
-  },
+ 
+  
   {
     "angle": 324,
     "brLimit": 325,
