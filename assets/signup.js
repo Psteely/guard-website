@@ -183,6 +183,12 @@ async function loadShips(pbBRValue) {
 
       // Invalidate full PB snapshot so roster/assign reload fresh
       cacheRemove(cachePBKey(pbId, "full"));
+await fetch(`${API_BASE}/pb/${pbId}/assign`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({})
+});
+
 
       // Redirect
       window.location.href = `/pb/roster.html?id=${pbId}`;
